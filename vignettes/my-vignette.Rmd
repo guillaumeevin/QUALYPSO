@@ -1,0 +1,85 @@
+---
+title: "Use QUALYPSO to partition uncertainty components of an incomplete ensemble of climate projections"
+author: "Guillaume Evin"
+date: "April 30, 2019"
+header-includes:
+  - \usepackage{enumerate}
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{my-vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This vignette presents the use of the package **QUALYPSO**:
+
+```{r setup}
+library(QUALYPSO)
+```
+
+The functions provided by the package **QUALYPSO** are related to the work presented in the following reference:
+
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie, 2019: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation. J. Climate, 32, 2423–2440, https://doi.org/10.1175/JCLI-D-18-0606.1 
+
+We refer to this paper for all technical details.
+
+# Introduction
+QUALYPSO uses data augmentation to assess the different sources of uncertainty in incomplete multiscenario multimodel ensembles (MMEs) of climate experiments. 
+
+- In a first step, the climate response of each available simulation chain is estimated with cubic splines fitted to raw climate projections. Climate change responses can then be obtained.
+- Residuals from the climate change response are used to estimate the internal variability of the chain. 
+- The other uncertainty components of the projections (scenario uncertainty and climate model uncertainty) are estimated with a Bayesian ANOVA model applied to the climate change responses of available simulation chains. The ANOVA model provides an estimate of the mean climate change response of the MME, as well as an estimate of the main effects of the different emission scenarios and climate models (GCMs and RCMs). The different parameters of the ANOVA model and the missing quantities associated to the missing simulation chains are jointly estimated using data augmentation techniques.
+
+------
+
+# Toy scenarios
+Three synthetic scenarios of a fictive climate variable $Y$ are produced, corresponding to the combination of two different *Global Climate Models (GCMs)* and two different *Regional Climate Models (RCMs)*. One GCM/RCM combination is supposed to be missing. These scenarios are time series of 100 fictive future years: 2001-2100.
+
+```{r dataQUALYPSO, fig.height=4, fig.width=6}
+# Vector of fictive years
+vecYears = 2001:2100
+# number of scenarios
+nS = nrow(dataQUALYPSO)
+# number of years
+nT = ncol(dataQUALYPSO)
+# plot scenarios
+plot(-1,-1,xlim=range(vecYears), ylim=c(-2,4), xlab="Years", ylab="Y")
+for(i in 1:nS) lines(vecYears,dataQUALYPSO[i,],col=i,lwd=3)
+```
+
+------
+
+# Run main function QUALYPSO
+
+```QUALYPSO``` is the main function of the package and produces all the outputs. The main arguments are:
+
+- **Y** : the available climate projections which can be either a matrix ```nS``` $\times$ ```nY``` or an array ```nG``` $\times$ ```nS``` $\times$ ```nY``` if the climate projections are available for ```nG``` grid points.
+- **scenAvail** : matrix of scenario characeristics ```nS``` $\times$ ```nEff```. The number of characeristics ```nEff``` corresponds to the number of main effects which will be included in the ANOVA model. In the following example, we have $n_{Eff}=2$ main effects corresponding to the GCMs and RCMs. ```scenAvail``` indicates that the first scenario is obtained with the combination of the GCM ```GCM1``` and RCM ```RCM1```, the second scenario is obtained with the combination of the GCM ```GCM1``` and RCM ```RCM2``` and the third scenario is obtained with th combination of the GCM ```GCM2``` and RCM ```RCM1```.
+
+- **vecYears** : vector of years corresponding to the projections (i.e. ```vecYears=2001:2100```). Optional, mainly used for records. By default, a vector ```1:nY``` is created.
+
+- **indexReferenceYear** : index in ```vecYears``` corresponding to the control year. For example, if ```vecYears=1980:2100``` and we want to specify a control year equals to 1990, we indicate ```indexReferenceYear=11``` or, equivalently ```indexReferenceYear=which(vecYears==1990)``` **if** ```vecYears``` is already available in the workspace.
+
+- **indexFutureYear** : index in ```indexFutureYear``` corresponding to a future year (similarly to ```indexReferenceYear```).
+
+In addition, **listOption** is a ```list``` object containing different possible options:
+
+- **parSmooth**: smoothing parameter spar in `smooth.spline`: varies in $[0,1]$.
+
+```{r functionQUALYPSO}
+scenAvail = cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))
+vecYears = 2001:2100
+listOption = list(nBurn=10,nKeep=10)
+QUALYPSOOUT = QUALYPSO(Y=dataQUALYPSO, scenAvail=scenAvail, vecYears=vecYears, listOption=listOption)
+```
+
+------
+
+# Extracting climate responses
