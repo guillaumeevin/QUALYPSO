@@ -10,10 +10,10 @@ QUALYPSO.check.option(listOption)
 \item{listOption}{list of options}
 }
 \value{
-listOption
+List containing the complete set of options.
 }
 \description{
-Check possible options
+Check if input options provided in \code{\link{QUALYPSO}} are valid and assigned default values if missing.
 }
 \author{
 Guillaume Evin

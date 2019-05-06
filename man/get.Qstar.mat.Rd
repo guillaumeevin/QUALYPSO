@@ -13,11 +13,14 @@ get.Qstar.mat(p)
 \item{matrix}{p x (p-1) matrix containing Helmert contrasts}
 }
 \description{
-Provide matrix containing Helmert contrasts (see Eq. A10 in Tingley et al., 2011).
+Provide matrix containing Helmert contrasts (see Eq. A7 in Evin et al., 2019).
 }
 \references{
-Tingley, Martin P. 2011. A Bayesian ANOVA Scheme for Calculating Climate Anomalies,
-with Applications to the Instrumental Temperature Record. Journal of Climate 25 (2). https://doi.org/10.1175/JCLI-D-11-00008.1.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie. (2019) <doi:10.1175/JCLI-D-18-0606.1>.
+
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
+Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 }
 \author{
 Guillaume Evin

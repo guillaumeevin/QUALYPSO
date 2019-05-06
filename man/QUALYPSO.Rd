@@ -5,60 +5,131 @@
 \title{QUALYPSO}
 \usage{
 QUALYPSO(Y, scenAvail, vecYears = NULL, indexReferenceYear = NULL,
-  futureYear = NULL, listOption = NULL)
+  indexFutureYear = NULL, listOption = NULL)
 }
 \arguments{
-\item{Y}{array of climate response: \code{nS} x \code{nY}}
+\item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections}
 
-\item{scenAvail}{matrix of available combinations, ex \code{cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))}}
+\item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
+number of main effects which will be included in the ANOVA model.}
 
-\item{vecYears}{vector of years corresponding to the projections}
+\item{vecYears}{(optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
+mainly used for records. By default, a vector ```1:nY``` is created.}
 
-\item{indexReferenceYear}{index corresponding to the control year (e.g. 1990)}
+\item{indexReferenceYear}{(optional) index in ```vecYears``` corresponding to the control year. For example, if \code{vecYears=1980:2100}
+and we want to specify a control year equals to 1990, we indicate ```indexReferenceYear=11``` or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
+\strong{if} \code{vecYears} is already available in the workspace}
 
-\item{futureYear}{index corresponding to a future year (e.g. 2090)}
+\item{indexFutureYear}{index in ```indexFutureYear``` corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
+\code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.}
 
 \item{listOption}{(optional) list of options
 \itemize{
   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]
-  \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute) or "rel" (relative)
-  \item \strong{nBurn}: number of burn-in samples (default: 1000)
-  \item \strong{nKeep}: number of kept samples (default: 2000)
-  \item \strong{nCluster}: number of clusters used for the parellelization
-  \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (=FALSE)
-  or if only quantiles are retrieved (=TRUE)
-  \item \strong{computeEmpEff}: vector of column indices in scenAvail corresponding to effects which are estimated empirically
-
+  \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
+  \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
+  \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
+  distributions of inferred parameters.
+  \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When 'nCluster' is greater than one, parallelization is used to
+  apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
+  \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (if FALSE)
+  or if only quantiles are retrieved (if TRUE). Equals TRUE by default
+  \item \strong{computeEmpEff}: vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically (e.g. interactions) when
+  the number of available runs is not sufficient to identify / estimate these additional effects.
+  \item \strong{quantileCompress}: vector of probabilities (in [0,1]) for which we compute the quantiles from the posterior distributions
+   \code{quantileCompress = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default
 }}
 }
 \value{
 list with the following fields:
 \itemize{
-  \item \strong{mu}: mean climate change response
-  \item \strong{sigma2}: variance of the residual terms
-  \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
+  \item \strong{CLIMATEESPONSE}: list of climate change responses and corresponding internal variability. Contains \code{phiStar} (climate change responses),
+  \code{etaStar} (deviation from the climate change responses as a result of internal variability), and \code{phi} (fitted climate responses)
+  \item \strong{ANOVAPOST}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
+  \item \strong{ANOVAQUANT}: list of quantiles from the posterior distributions of inferred quantities
+  \item \strong{ANOVAMEAN}: list of mean of the posterior distributions of inferred quantities
   Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-  \item \strong{varEffect}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
-  \item \strong{varResidualEffect}: vector of length \code{nY} of variances of residual effects
-  \item \strong{years}: number of years (nY)
-  \item \strong{scenAvail}: matrix of available combinations given as inputs
-  \item \strong{listEff}: list of effects contained in scenAvail
-  \item \strong{listOption}: list of options used to obtained these results
+  \item \strong{ANOVAVARIANCE}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
+  \item \strong{vecYears}: vector of years
+  \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+  \item \strong{Y}: matrix of available combinations given as inputs
+  \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
+  \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
 }
 }
 \description{
-Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach
+Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 }
 \examples{
-scenAvail = cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))
+##########################################################################
+# SYNTHETIC SCENARIOS
+##########################################################################
+# create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=100 years
+n=100
+t=1:n/n
+
+# GCM effects (sums to 0 for each t)
+effGCM1 = t*2
+effGCM2 = t*-2
+
+# RCM effects (sums to 0 for each t)
+effRCM1 = t*1
+effRCM2 = t*-1
+
+# These climate scenarios are a sum of effects and a random gaussian noise
+scenGCM1RCM1 = effGCM1 + effRCM1 + rnorm(n=n,sd=0.5)
+scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n,sd=0.5)
+scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n,sd=0.5)
+Y = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
+
+# Here, scenAvail indicates that the first scenario is obtained with the combination of the
+# GCM "GCM1" and RCM "RCM1", the second #' # scenario is obtained with the combination of
+# the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with th combination
+# of the GCM "GCM2" and RCM "RCM1".
+scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
+
+##########################################################################
+# RUN QUALYPSO
+##########################################################################
+# call main QUALYPSO function: two arguments are mandatory:
+# - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
+# run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
+# we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
+# indexFutureYear.
+# - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
+# characeristics nEff corresponds to the number of main effects which will be included in the
+# ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
+# and RCMs.
+
+# Many options can be specified in the argument "listOption". Here, we change the default values
+# for nBurn and nKeep in order to speed up computation time for this small example. However, note
+# that convergence and sampling of the posterior distributions often require higher values for these
+# two parameters.
 listOption = list(nBurn=100,nKeep=100)
-QUALYPSOOUT = QUALYPSO(Y=dataQUALYPSO, scenAvail=scenAvail, listOption=listOption)
+
+# run QUALYPSO
+QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, listOption=listOption)
+
+##########################################################################
+# SOME PLOTS
+##########################################################################
+# plot grand mean
+plotQUALYPSOgrandmean(QUALYPSOOUT)
+
+# plot main GCM effects
+plotQUALYPSOeffect(QUALYPSOOUT,iEff=1)
+
+# plot main RCM effects
+plotQUALYPSOeffect(QUALYPSOOUT,iEff=2)
+
+# plot fraction of total variance for the differences sources of uncertainty
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
 
 }
 \references{
 Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 }
 \author{
 Guillaume Evin

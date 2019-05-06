@@ -1,6 +1,6 @@
 ###===============================###===============================###
 ### Guillaume Evin
-### 11/02/2019, Grenoble
+### 02/05/2019, Grenoble
 ###  IRSTEA
 ### guillaume.evin@irstea.fr
 ###
@@ -12,9 +12,9 @@
 ###
 ### REFERENCES
 ###
-### Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+### references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 ### Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-### Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+### Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 ###
 ###
 ###===============================###===============================###
@@ -32,6 +32,10 @@
 #' @return \item{matrix}{p x (p-1) matrix containing Helmert contrasts}
 #'
 #' @author Guillaume Evin
+#'
+#' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+#' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
+#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 get.Qstar.mat = function(p){
   # initialize matrix
   M = matrix(NA,nrow=p,ncol=(p-1))
@@ -56,16 +60,18 @@ get.Qstar.mat = function(p){
 #==============================================================================
 #' get.Qmat
 #'
-#' Provide matrix Q derived from a matrix of Helmert contrasts: \deqn{ Q = Q^* (Q^{*T} Q^*)^{-1/2}}
+#' Provide matrix Q derived from a matrix Q* of Helmert contrasts: \deqn{Q = Q^* (Q^{*T} Q^*)^{-1/2}}
 #' See Eq. A6 in Evin et al., 2019.
-#'
-#' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie. (2019) <doi:10.1175/JCLI-D-18-0606.1>.
 #'
 #' @param p integer
 #'
 #' @return \item{matrix}{p x p matrix}
 #'
 #' @author Guillaume Evin
+#'
+#' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+#' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
+#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 get.Qmat = function(p){
   # get Qstar
   Qstar = get.Qstar.mat(p)
@@ -80,15 +86,15 @@ get.Qmat = function(p){
 #==============================================================================
 #' fit.climate.response
 #'
-#' fit trends for each simulation chain of an ensemble of \code{nS} projections. Each projection can be a time series
+#' Fit trends for each simulation chain of an ensemble of \code{nS} projections. Each simulation chain is a time series
 #' of \code{nY} time steps (e.g. number of years).
 #'
-#' @param Y matrix ofsimulation chains: \code{nS} x \code{nY}
-#' @param parSmooth smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]
-#' @param indexReferenceYear index of the control year (e.g. 1990)
-#' @param typeChangeVariable type of change variable: "abs" (absolute) or "rel" (relative)
+#' @param Y matrix of simulation chains: \code{nS} x \code{nY}
+#' @param parSmooth smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
+#' @param indexReferenceYear index of the reference year
+#' @param typeChangeVariable type of change variable: "abs" or "rel"
 #'
-#' @return list with the following fields:
+#' @return list with the following fields for each simulation chain:
 #' \itemize{
 #'   \item \strong{phiStar}: climate change response
 #'   \item \strong{etaStar}: internal variability
@@ -97,8 +103,17 @@ get.Qmat = function(p){
 #'   \item \strong{varInterVariability}: scalar, internal variability component of the MME
 #' }
 #'
+#' @details
+#' See \code{\link{QUALYPSO}} for further information on arguments \code{indexReferenceYear} and \code{typeChangeVariable}.
+#'
+#' @export
+#'
 #' @author Guillaume Evin
-fit.climate.response = function(Y, parSmooth=1, indexReferenceYear=1, typeChangeVariable="abs"){
+#'
+#' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+#' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
+#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+fit.climate.response = function(Y, parSmooth, indexReferenceYear, typeChangeVariable){
 
   # number of simulation chains
   nS = nrow(Y)
@@ -124,7 +139,7 @@ fit.climate.response = function(Y, parSmooth=1, indexReferenceYear=1, typeChange
     # store climate response for this simulation chain
     phi[iS,] = phiS
 
-    # climate response of the control year
+    # climate response of the reference year
     phiC = phiS[indexReferenceYear]
 
     # Climate change response: phiStar, and internal variability expressed as a change: etaStar
@@ -156,11 +171,11 @@ fit.climate.response = function(Y, parSmooth=1, indexReferenceYear=1, typeChange
 #==============================================================================
 #' QUALYPSO.ANOVA.i
 #'
-#' Partition sources of uncertainty in climate change responses for one lead time 't' or grid point 'i'.
+#' Partition sources of uncertainty in climate change responses for one lead time or one grid point.
 #'
-#' @param phiStar.i vector of climate change response at time 't' or for grid point 'i': \code{nS x 1}
-#' @param nMCMC number of MCMC simulation
-#' @param listScenarioInput list containing specifications, provided by \code{QUALYPSO.process.scenario}
+#' @param phiStar.i vector of \code{nS} climate change response for one lead time or for one grid point: \code{nS x 1}
+#' @param nMCMC number of MCMC simulation required
+#' @param listScenarioInput list containing specifications, provided by \code{\link{QUALYPSO.process.scenario}}
 #'
 #' @return  list with the following fields:
 #' \itemize{
@@ -173,7 +188,7 @@ fit.climate.response = function(Y, parSmooth=1, indexReferenceYear=1, typeChange
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 #'
 #' @author Guillaume Evin
 QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
@@ -195,7 +210,7 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
   #=============  initialize effects =================
   effect.POST = list()
   if(all(phiStar.i==0)){
-    # when i corresponds to the control period, phiStar.i = 0 and no ANOVA can be performed
+    # when i corresponds to the reference period, phiStar.i = 0 and no ANOVA can be performed
     # return 0 instead of NA for representations
     mu.POST = sigma2.POST = rep(0,nMCMC)
     for(i.eff in 1:nEff) effect.POST[[i.eff]] = matrix(0,nrow=nMCMC,ncol=nTypeEff[i.eff])
@@ -255,8 +270,8 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
   mat.eff = matrix(nrow=nComp,ncol=nEff)
   for(i.eff in 1:nEff){
     n = nTypeEff[i.eff]
-    eff.star = rnorm(n=(n-1),sd=sqrt(s2eff)) # Eq A8
-    eff = Qmat[[i.eff]] %*% eff.star # linear transform, see par. in Appedix A, section c. for the parameter beta
+    eff.star = rnorm(n=(n-1),sd=sqrt(s2eff)) # Eq. A8
+    eff = Qmat[[i.eff]] %*% eff.star # linear transform, see Appendix A for the parameter beta
     mat.eff[,i.eff] = eff[indexEffInCompScen[,i.eff]]
     effect.POST[[i.eff]][1,] = eff
   }
@@ -331,10 +346,11 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
 #'
 #' Process input scenarios.
 #'
-#' @param scenAvail matrix of available combinations
-#' @param computeEmpEff vector of column indices in scenAvail corresponding to effects which are estimated empirically
+#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
+#' @param computeEmpEff vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically
 #'
-#' @return list of objects
+#' @return list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
+#' indexEffInCompScen, Qmat, EmpEff})
 #'
 #' @author Guillaume Evin
 QUALYPSO.process.scenario = function(scenAvail,computeEmpEff){
@@ -429,11 +445,11 @@ QUALYPSO.process.scenario = function(scenAvail,computeEmpEff){
 #==============================================================================
 #' QUALYPSO.check.option
 #'
-#' Check possible options.
+#' Check if input options provided in \code{\link{QUALYPSO}} are valid and assigned default values if missing.
 #'
 #' @param listOption list of options
 #'
-#' @return listOption
+#' @return List containing the complete set of options.
 #'
 #' @author Guillaume Evin
 QUALYPSO.check.option = function(listOption){
@@ -503,7 +519,7 @@ QUALYPSO.check.option = function(listOption){
     listOption[['computeEmpEff']] = NULL
   }
 
-  # doCompress
+  # quantileCompress
   if('quantileCompress' %in% names(listOption)){
     quantileCompress = listOption[['quantileCompress']]
     if(!(is.numeric(quantileCompress))) stop('wrong value for quantileCompress')
@@ -521,39 +537,30 @@ QUALYPSO.check.option = function(listOption){
 #==============================================================================
 #' QUALYPSO.ANOVA
 #'
-#' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach
+#' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 #'
-#' @param phiStar array of climate response: \code{nS} x \code{nY}
-#' @param scenAvail matrix of available combinations
-#' @param listOption (optional) list of options
-#' \itemize{
-#'   \item \strong{nBurn}: number of burn-in samples (default: 1000)
-#'   \item \strong{nKeep}: number of kept samples (default: 2000)
-#'   \item \strong{nCluster}: number of clusters used for the parellelization
-#'   \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (=FALSE)
-#'   or if only quantiles are retrieved (=TRUE)
-#'   \item \strong{computeEmpEff}: vector of column indices in scenAvail corresponding to effects which are estimated empirically
-#' }
+#' @param phiStar matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}. \code{n} can be the number of time steps or the number of grid points
+#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
+#' @param listOption list of options (see \code{\link{QUALYPSO}})
 #'
 #' @return  list with the following fields:
 #' \itemize{
-#'   \item \strong{mu}: mean climate change response
-#'   \item \strong{sigma2}: variance of the residual terms
-#'   \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
-#'   Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-#'   \item \strong{varEffect}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
-#'   \item \strong{varResidualEffect}: vector of length \code{nY} of variances of residual effects
-#'   \item \strong{years}: number of years (nY)
-#'   \item \strong{scenAvail}: matrix of available combinations given as inputs
-#'   \item \strong{listEff}: list of effects contained in scenAvail
-#'   \item \strong{listOption}: list of options used to obtained these results
+#'   \item \strong{POSTERIOR}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
+#'   \item \strong{QUANT}: list of quantiles from the posterior distributions of inferred quantities
+#'   \item \strong{MEAN}: list of mean of the posterior distributions of inferred quantities
+#'   \item \strong{varEffect}: matrix \code{nEff} x \code{n} of variances related to the main effects
+#'   \item \strong{varResidualEffect}: vector of length \code{n} of variances of residual effects
+#'   \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
+#'   \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
 #' }
+#'
+#' @export
+#'
+#' @author Guillaume Evin
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
-#'
-#' @author Guillaume Evin
+#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   #########  process input #########
   if(any(is.na(phiStar))){
@@ -728,7 +735,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 
   # return results
   return(list(POSTERIOR=POST,QUANT=QUANT,MEAN=MEAN,varEffect=varEffect,varResidualEffect=varResidualEffect,
-              years=y.POST,scenAvail=scenAvail,listOption=listOption,listEff=listScenarioInput$listEff))
+              listOption=listOption,listScenarioInput=listScenarioInput))
 
 }
 
@@ -737,51 +744,124 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #==============================================================================
 #' QUALYPSO
 #'
-#' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach
+#' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 #'
-#' @param Y array of climate response: \code{nS} x \code{nY}
-#' @param scenAvail matrix of available combinations
-#' @param vecYears vector of years corresponding to the projections
-#' @param indexReferenceYear index corresponding to the control year (e.g. 1990)
-#' @param futureYear index corresponding to a future year (e.g. 2090)
+#' @param Y matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections
+#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
+#' number of main effects which will be included in the ANOVA model.
+#' @param vecYears (optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
+#' mainly used for records. By default, a vector ```1:nY``` is created.
+#' @param indexReferenceYear (optional) index in ```vecYears``` corresponding to the control year. For example, if \code{vecYears=1980:2100}
+#' and we want to specify a control year equals to 1990, we indicate \code{indexReferenceYear=11} or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
+#' \strong{if} \code{vecYears} is already available in the workspace
+#' @param indexFutureYear index in ```indexFutureYear``` corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
+#' \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.
 #' @param listOption (optional) list of options
 #' \itemize{
 #'   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]
-#'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute) or "rel" (relative)
-#'   \item \strong{nBurn}: number of burn-in samples (default: 1000)
-#'   \item \strong{nKeep}: number of kept samples (default: 2000)
-#'   \item \strong{nCluster}: number of clusters used for the parellelization
-#'   \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (=FALSE)
-#'   or if only quantiles are retrieved (=TRUE)
-#'   \item \strong{computeEmpEff}: vector of column indices in scenAvail corresponding to effects which are estimated empirically
-#'
+#'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
+#'   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
+#'   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
+#'   distributions of inferred parameters.
+#'   \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When \code{nCluster} is greater than one, parallelization is used to
+#'   apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
+#'   \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (if FALSE)
+#'   or if only quantiles are retrieved (if TRUE). Equals TRUE by default
+#'   \item \strong{computeEmpEff}: vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically (e.g. interactions) when
+#'   the number of available runs is not sufficient to identify / estimate these additional effects.
+#'   \item \strong{quantileCompress}: vector of probabilities (in [0,1]) for which we compute the quantiles from the posterior distributions
+#'    \code{quantileCompress = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default
 #' }
 #'
 #' @return  list with the following fields:
 #' \itemize{
-#'   \item \strong{mu}: mean climate change response
-#'   \item \strong{sigma2}: variance of the residual terms
-#'   \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
+#'   \item \strong{CLIMATEESPONSE}: list of climate change responses and corresponding internal variability. Contains \code{phiStar} (climate change responses),
+#'   \code{etaStar} (deviation from the climate change responses as a result of internal variability), and \code{phi} (fitted climate responses)
+#'   \item \strong{ANOVAPOST}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
+#'   \item \strong{ANOVAQUANT}: list of quantiles from the posterior distributions of inferred quantities
+#'   \item \strong{ANOVAMEAN}: list of mean of the posterior distributions of inferred quantities
 #'   Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-#'   \item \strong{varEffect}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
-#'   \item \strong{varResidualEffect}: vector of length \code{nY} of variances of residual effects
-#'   \item \strong{years}: number of years (nY)
-#'   \item \strong{scenAvail}: matrix of available combinations given as inputs
-#'   \item \strong{listEff}: list of effects contained in scenAvail
-#'   \item \strong{listOption}: list of options used to obtained these results
+#'   \item \strong{ANOVAVARIANCE}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
+#'   \item \strong{vecYears}: vector of years
+#'   \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+#'   \item \strong{Y}: matrix of available combinations given as inputs
+#'   \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
+#'   \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
 #' }
+#'
 #' @examples
-#' scenAvail = cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))
+#' ##########################################################################
+#' # SYNTHETIC SCENARIOS
+#' ##########################################################################
+#' # create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=100 years
+#' n=100
+#' t=1:n/n
+#'
+#' # GCM effects (sums to 0 for each t)
+#' effGCM1 = t*2
+#' effGCM2 = t*-2
+#'
+#' # RCM effects (sums to 0 for each t)
+#' effRCM1 = t*1
+#' effRCM2 = t*-1
+#'
+#' # These climate scenarios are a sum of effects and a random gaussian noise
+#' scenGCM1RCM1 = effGCM1 + effRCM1 + rnorm(n=n,sd=0.5)
+#' scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n,sd=0.5)
+#' scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n,sd=0.5)
+#' Y = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
+#'
+#' # Here, scenAvail indicates that the first scenario is obtained with the combination of the
+#' # GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
+#' # the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
+#' # of the GCM "GCM2" and RCM "RCM1".
+#' scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
+#'
+#' ##########################################################################
+#' # RUN QUALYPSO
+#' ##########################################################################
+#' # call main QUALYPSO function: two arguments are mandatory:
+#' # - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
+#' # run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
+#' # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
+#' # indexFutureYear.
+#' # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
+#' # characteristics nEff corresponds to the number of main effects which will be included in the
+#' # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
+#' # and RCMs.
+#'
+#' # Many options can be specified in the argument "listOption". Here, we change the default values
+#' # for nBurn and nKeep in order to speed up computation time for this small example. However, it must
+#' # be noticed that convergence and sampling of the posterior distributions often require higher values
+#' # for these two parameters.
 #' listOption = list(nBurn=100,nKeep=100)
-#' QUALYPSOOUT = QUALYPSO(Y=dataQUALYPSO, scenAvail=scenAvail, listOption=listOption)
+#'
+#' # run QUALYPSO
+#' QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2100, listOption=listOption)
+#'
+#' ##########################################################################
+#' # SOME PLOTS
+#' ##########################################################################
+#' # plot grand mean
+#' plotQUALYPSOgrandmean(QUALYPSOOUT)
+#'
+#' # plot main GCM effects
+#' plotQUALYPSOeffect(QUALYPSOOUT,iEff=1)
+#'
+#' # plot main RCM effects
+#' plotQUALYPSOeffect(QUALYPSOOUT,iEff=2)
+#'
+#' # plot fraction of total variance for the differences sources of uncertainty
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 #'
 #' @export
+#'
 #' @author Guillaume Evin
-QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,futureYear=NULL,listOption=NULL){
+QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutureYear=NULL,listOption=NULL){
   ######### Check inputs and assign default values ##########
 
   ######## Check list of options ########
@@ -798,7 +878,7 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,futureYear
 
     # parallelization over space (e.g. on a grid)
     paralType = 'Grid'
-    if(is.null(futureYear)) stop("Since Y is an array of dimension 3: 'futureYear' must be provided'")
+    if(is.null(indexFutureYear)) stop("Since Y is an array of dimension 3: 'indexFutureYear' must be provided'")
   }else{
     # Y is a matrix: Scenario x Time
     nS = nrow(Y)
@@ -823,9 +903,9 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,futureYear
     indexReferenceYear = 1
   }
 
-  # futureYear
+  # indexFutureYear
   if(paralType == 'Grid'){
-    if(!any(futureYear==1:nY)) stop('wrong value for futureYear')
+    if(!any(indexFutureYear==1:nY)) stop('wrong value for indexFutureYear')
   }
 
   ##############################################
@@ -870,10 +950,10 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,futureYear
     }
 
     # phiStar for ANOVA
-    phiStar = t(phiStarAllTime[,,futureYear])
+    phiStar = t(phiStarAllTime[,,indexFutureYear])
 
     # vector of years for ANOVA
-    vecYearsANOVA = vecYears[futureYear]
+    vecYearsANOVA = vecYears[indexFutureYear]
   }
 
 
@@ -893,7 +973,217 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,futureYear
 
   # return results
   return(list(CLIMATEESPONSE=list(phiStar=phiStarAllTime,etaStar=etaStarAllTime,phi=phiAllTime),
-              ANOVAPOST=anova$POSTERIOR,ANOVAQUANT=anova$QUANT,ANOVAMEAN=anova$MEAN,
+              ANOVAPOST=anova$POSTERIOR,ANOVAQUANT=anova$QUANT,ANOVAMEAN=anova$MEAN,paralType=paralType,
               ANOVAVARIANCE=ANOVAVARIANCE,vecYears=listOption$vecYears,vecYearsANOVA=vecYearsANOVA,
-              Y=Y,scenAvail=scenAvail,listEff=anova$listEff,listOption=anova$listOption))
+              Y=Y,listOption=anova$listOption,listScenarioInput=anova$listScenarioInput))
+}
+
+
+
+#==============================================================================
+#' plotQUALYPSOgrandmean
+#'
+#' Plot prediction of grand mean ensemble. By default, we plot the credible interval corresponding to a probability 0.95.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param iMedian index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)
+#' @param iBinf index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)
+#' @param iBsup index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)
+#' @param lim y-axis limits (default is NULL)
+#' @param col color for the overall mean and the credible interval
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOgrandmean = function(QUALYPSOOUT,iMedian=7,iBinf=2,iBsup=12,lim=NULL,
+                                   col='black',xlab="Years",ylab="Grand mean",addLegend=T,
+                                   ...){
+  # vector of years
+  vecYears = QUALYPSOOUT$vecYearsANOVA
+
+  # retrieve median and limits
+  medRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iMedian]
+  binfRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iBinf]
+  bsupRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iBsup]
+
+  # get smooth limits
+  med = predict(loess(medRaw~vecYears))
+  binf = predict(loess(binfRaw~vecYears))
+  bsup = predict(loess(bsupRaw~vecYears))
+
+  # colors polygon
+  colPoly = adjustcolor(col,alpha.f=0.2)
+
+  # initiate plot
+  if(is.null(lim)) lim = range(c(binf,bsup),na.rm=TRUE)
+  plot(-100,-100,xlim=range(vecYears),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+
+  # add confidence interval
+  polygon(c(vecYears,rev(vecYears)),c(binf,rev(bsup)),col=colPoly,lty=0)
+
+  # add median
+  lines(vecYears,med,lwd=3,col=col)
+
+  # legend
+  if(addLegend){
+    pctCI = plotQUALYPSOgetCI(QUALYPSOOUT,iBinf,iBsup)
+    legend('topleft',bty='n',fill=c(NA,colPoly),lwd=c(2,NA),lty=c(1,NA),
+           border=c(NA,col),col=c(col,NA),legend=c('Median',paste0(pctCI,'%CI')))
+  }
+}
+
+
+#==============================================================================
+#' plotQUALYPSOeffect
+#'
+#' Plot prediction of ANOVA effects for one main effect. By default, we plot we plot the credible intervals corresponding to a probability 0.95.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param iEff index of the main effect to be plotted in \code{QUALYPSOOUT$listScenarioInput$listEff}
+#' @param includeMean if TRUE, the grand mean is added to the main effect in the plot
+#' @param iMedian index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)
+#' @param iBinf index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)
+#' @param iBsup index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)
+#' @param lim y-axis limits (default is NULL)
+#' @param col colors for each effect
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,iMedian=7,iBinf=2,iBsup=12,lim=NULL,
+                                   col=1:20,xlab="Years",ylab="Effect",addLegend=TRUE,
+                                   ...){
+  # vector of years
+  vecYears = QUALYPSOOUT$vecYearsANOVA
+
+  # retrieve effects
+  if(includeMean){
+    QUANTEff = QUALYPSOOUT$ANOVAQUANT$ChangeByEffect[[iEff]]
+  }else{
+    QUANTEff = QUALYPSOOUT$ANOVAQUANT$effect[[iEff]]
+  }
+  nEff = dim(QUANTEff)[3]
+
+  # retrieve median and limits
+  medRaw = QUANTEff[,iMedian,]
+  binfRaw = QUANTEff[,iBinf,]
+  bsupRaw = QUANTEff[,iBsup,]
+
+  # get smooth limits
+  med = apply(medRaw,2,function(x) predict(loess(x~vecYears)))
+  binf = apply(binfRaw,2,function(x) predict(loess(x~vecYears)))
+  bsup = apply(bsupRaw,2,function(x) predict(loess(x~vecYears)))
+
+  # initiate plot
+  if(is.null(lim)) lim = range(c(binf,bsup),na.rm=TRUE)
+  plot(-100,-100,xlim=range(vecYears),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+
+  for(i in 1:nEff){
+    # colors polygon
+    colPoly = adjustcolor(col[i],alpha.f=0.2)
+
+    # add confidence interval
+    polygon(c(vecYears,rev(vecYears)),c(binf[,i],rev(bsup[,i])),col=colPoly,lty=0)
+
+    # add median
+    lines(vecYears,med[,i],lwd=3,col=col[i])
+  }
+
+  # legend
+  if(addLegend){
+    pctCI = plotQUALYPSOgetCI(QUALYPSOOUT,iBinf,iBsup)
+    legend('topleft',bty='n',fill=c(NA,'black'),lwd=c(2,NA),lty=c(1,NA),
+           border=c(NA,'black'),col=c('black',NA),legend=c('Median',paste0(pctCI,'%CI')))
+
+    legend('bottomleft',bty='n',lwd=2,lty=1,col=col,
+           legend=QUALYPSOOUT$listScenarioInput$listEff[[iEff]])
+  }
+}
+
+#==============================================================================
+# plotQUALYPSOgetCI
+#
+# return confidence level given indices in QUALYPSOOUT$listOption$quantileCompress
+plotQUALYPSOgetCI = function(QUALYPSOOUT,iBinf,iBsup){
+  vecq = QUALYPSOOUT$listOption$quantileCompress
+  return(round((vecq[iBsup]-vecq[iBinf])*100))
+}
+
+
+#==============================================================================
+#' plotQUALYPSOTotalVarianceDecomposition
+#'
+#' Plot fraction of total variance explained by each source of uncertainty.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param col colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
+                                                     col=c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1"),
+                                                     xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
+  # number of years
+  vecYears = QUALYPSOOUT$vecYearsANOVA
+  nY = length(QUALYPSOOUT$vecYearsANOVA)
+
+  # Variance decomposition
+  VV = QUALYPSOOUT$ANOVAVARIANCE
+
+  # number of main effects
+  nEff = nrow(VV$eff)
+
+  # initialise matrix variances
+  vNorm = matrix(nrow=nEff+2,ncol=nY)
+
+  # part of variance due to the different effects
+  for(iEff in 1: nEff){
+    vNorm[iEff,] = VV$eff[iEff,]/VV$TotalVar
+  }
+
+  # Residual variance
+  vNorm[nEff+1,] = VV$ResidualEffect/VV$TotalVar
+
+  # Internal variability
+  vNorm[nEff+2,] = VV$InterVariability/VV$TotalVar
+
+
+  # figure
+  col = col[1:(nEff+2)]
+  cum=cum.smooth=rep(0,nY)
+  plot(-1,-1,xlim=range(vecYears),ylim=c(0,1),xaxs="i",yaxs="i",las=1,
+       xlab=xlab,ylab=ylab,...)
+  for(i in 1:(nEff+2)){
+    cumPrevious = cum.smooth
+    cum = cum + vNorm[i,]
+    cum.smooth = predict(loess(cum~vecYears))
+    cum.smooth[cum.smooth<0] = 0
+    polygon(c(vecYears,rev(vecYears)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
+  }
+  abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
+
+  # legend
+  if(addLegend){
+    if(is.null(colnames(QUALYPSOOUT$listScenarioInput$scenAvail))){
+      namesEff = paste0("Eff",1:nEff)
+    }else{
+      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)
+    }
+
+    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
+  }
+
 }

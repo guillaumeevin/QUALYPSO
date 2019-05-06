@@ -7,11 +7,11 @@
 QUALYPSO.ANOVA.i(phiStar.i, nMCMC, listScenarioInput)
 }
 \arguments{
-\item{phiStar.i}{vector of climate change response at time t: nS x 1}
+\item{phiStar.i}{vector of \code{nS} climate change response for one lead time or for one grid point: \code{nS x 1}}
 
-\item{nMCMC}{number of MCMC simulation}
+\item{nMCMC}{number of MCMC simulation required}
 
-\item{listScenarioInput}{list containing specifications, provided by \code{QUALYPSO.process.scenario}}
+\item{listScenarioInput}{list containing specifications, provided by \code{\link{QUALYPSO.process.scenario}}}
 }
 \value{
 list with the following fields:
@@ -24,12 +24,12 @@ list with the following fields:
 }
 }
 \description{
-Partition sources of uncertainty in climate change responses for one lead time or grid point 'i'
+Partition sources of uncertainty in climate change responses for one lead time or one grid point.
 }
 \references{
 Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 }
 \author{
 Guillaume Evin

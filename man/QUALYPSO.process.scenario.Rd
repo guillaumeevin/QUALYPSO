@@ -7,15 +7,16 @@
 QUALYPSO.process.scenario(scenAvail, computeEmpEff)
 }
 \arguments{
-\item{scenAvail}{matrix of available combinations, ex \code{cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))}}
+\item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}}
 
-\item{computeEmpEff}{vector of column indices in scenAvail corresponding to effects which are estimated empirically}
+\item{computeEmpEff}{vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically}
 }
 \value{
-list of objects
+list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
+indexEffInCompScen, Qmat, EmpEff})
 }
 \description{
-Process input scenarios
+Process input scenarios.
 }
 \author{
 Guillaume Evin

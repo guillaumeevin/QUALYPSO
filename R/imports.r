@@ -1,4 +1,6 @@
 #' @import doParallel
 #' @import foreach
-#' @importFrom stats aggregate rnorm rgamma quantile var
+#' @importFrom stats aggregate rnorm rgamma quantile var predict loess
+#' @importFrom graphics plot polygon abline axTicks legend lines
+#' @importFrom grDevices adjustcolor
 NULL

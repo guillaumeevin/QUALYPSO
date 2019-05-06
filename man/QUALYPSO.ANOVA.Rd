@@ -7,42 +7,31 @@
 QUALYPSO.ANOVA(phiStar, scenAvail, listOption = NULL)
 }
 \arguments{
-\item{phiStar}{array of climate response: \code{nS} x \code{nY}}
+\item{phiStar}{matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}. \code{n} can be the number of time steps or the number of grid points}
 
-\item{scenAvail}{matrix of available combinations, ex \code{cbind(c('GCM1','GCM1','GCM2'),c('RCM1','RCM2','RCM1'))}}
+\item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}}
 
-\item{listOption}{(optional) list of options
-\itemize{
-  \item \strong{nBurn}: number of burn-in samples (default: 1000)
-  \item \strong{nKeep}: number of kept samples (default: 2000)
-  \item \strong{nCluster}: number of clusters used for the parellelization
-  \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (=FALSE)
-  or if only quantiles are retrieved (=TRUE)
-  \item \strong{computeEmpEff}: vector of column indices in scenAvail corresponding to effects which are estimated empirically
-}}
+\item{listOption}{list of options (see \code{\link{QUALYPSO}})}
 }
 \value{
 list with the following fields:
 \itemize{
-  \item \strong{mu}: mean climate change response
-  \item \strong{sigma2}: variance of the residual terms
-  \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
-  Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-  \item \strong{varEffect}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
-  \item \strong{varResidualEffect}: vector of length \code{nY} of variances of residual effects
-  \item \strong{years}: number of years (nY)
-  \item \strong{scenAvail}: matrix of available combinations given as inputs
-  \item \strong{listEff}: list of effects contained in scenAvail
-  \item \strong{listOption}: list of options used to obtained these results
+  \item \strong{POSTERIOR}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
+  \item \strong{QUANT}: list of quantiles from the posterior distributions of inferred quantities
+  \item \strong{MEAN}: list of mean of the posterior distributions of inferred quantities
+  \item \strong{varEffect}: matrix \code{nEff} x \code{n} of variances related to the main effects
+  \item \strong{varResidualEffect}: vector of length \code{n} of variances of residual effects
+  \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
+  \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
 }
 }
 \description{
-Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach
+Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 }
 \references{
 Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-Journal of Climate. https://doi.org/10.1175/JCLI-D-18-0606.1.
+Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 }
 \author{
 Guillaume Evin

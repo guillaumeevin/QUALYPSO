@@ -4,20 +4,19 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, parSmooth = 1, indexReferenceYear = 1,
-  typeChangeVariable = "abs")
+fit.climate.response(Y, parSmooth, indexReferenceYear, typeChangeVariable)
 }
 \arguments{
-\item{Y}{matrix ofsimulation chains: \code{nS} x \code{nY}}
+\item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
 
-\item{parSmooth}{smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]}
+\item{parSmooth}{smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]}
 
-\item{indexReferenceYear}{index of the control year (e.g. 1990)}
+\item{indexReferenceYear}{index of the reference year}
 
-\item{typeChangeVariable}{type of change variable: "abs" (absolute) or "rel" (relative)}
+\item{typeChangeVariable}{type of change variable: "abs" or "rel"}
 }
 \value{
-list with the following fields:
+list with the following fields for each simulation chain:
 \itemize{
   \item \strong{phiStar}: climate change response
   \item \strong{etaStar}: internal variability
@@ -27,8 +26,16 @@ list with the following fields:
 }
 }
 \description{
-fit trends for each simulation chain of an ensemble of \code{nS} projections. Each projection can be a time series
-of \code{nY} time steps (e.g. number of years)
+Fit trends for each simulation chain of an ensemble of \code{nS} projections. Each simulation chain is a time series
+of \code{nY} time steps (e.g. number of years).
+}
+\details{
+See \code{\link{QUALYPSO}} for further information on arguments \code{indexReferenceYear} and \code{typeChangeVariable}.
+}
+\references{
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
+Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 }
 \author{
 Guillaume Evin
