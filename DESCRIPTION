@@ -1,7 +1,7 @@
 Package: QUALYPSO
 Type: Package
 Date: 2019-04-29
-License: file LICENSE
+License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
 Version: 1.0.1
 Authors@R: c(person("Guillaume","Evin",role = c("aut", "cre"),email="guillaume.evin@irstea.fr"))

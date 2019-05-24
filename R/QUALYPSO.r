@@ -750,11 +750,11 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
 #' number of main effects which will be included in the ANOVA model.
 #' @param vecYears (optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
-#' mainly used for records. By default, a vector ```1:nY``` is created.
-#' @param indexReferenceYear (optional) index in ```vecYears``` corresponding to the control year. For example, if \code{vecYears=1980:2100}
+#' mainly used for records. By default, a vector \code{1:nY} is created.
+#' @param indexReferenceYear (optional) index in \code{vecYears} corresponding to the control year. For example, if \code{vecYears=1980:2100}
 #' and we want to specify a control year equals to 1990, we indicate \code{indexReferenceYear=11} or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
 #' \strong{if} \code{vecYears} is already available in the workspace
-#' @param indexFutureYear index in ```indexFutureYear``` corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
+#' @param indexFutureYear index in \code{indexFutureYear} corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
 #' \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.
 #' @param listOption (optional) list of options
 #' \itemize{
@@ -832,8 +832,8 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #'
 #' # Many options can be specified in the argument "listOption". Here, we change the default values
 #' # for nBurn and nKeep in order to speed up computation time for this small example. However, it must
-#' # be noticed that convergence and sampling of the posterior distributions often require higher values
-#' # for these two parameters.
+#' # be noticed that convergence and sampling of the posterior distributions often require higher
+#' # values for these two parameters.
 #' listOption = list(nBurn=100,nKeep=100)
 #'
 #' # run QUALYPSO
@@ -853,6 +853,10 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #'
 #' # plot fraction of total variance for the differences sources of uncertainty
 #' plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
+#'
+#' # plot mean prediction and total variance with the differences sources of uncertainty
+#' # for one scenario (e.g. a RCP scenario)
+#' plotQUALYPSOTotalVarianceByScenario(QUALYPSOOUT,iEff=1,nameScenario='GCM1')
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
@@ -898,14 +902,20 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 
   # indexReferenceYear
   if(!is.null(indexReferenceYear)){
-    if(!any(indexReferenceYear==1:nY)) stop('wrong value for indexReferenceYear')
+    if(!any(indexReferenceYear==1:nY)){
+      printMessageDimension(Y,scenAvail,vecYears)
+      stop('wrong value for indexReferenceYear')
+    }
   }else{
     indexReferenceYear = 1
   }
 
   # indexFutureYear
   if(paralType == 'Grid'){
-    if(!any(indexFutureYear==1:nY)) stop('wrong value for indexFutureYear')
+    if(!any(indexFutureYear==1:nY)){
+      printMessageDimension(Y,scenAvail,vecYears)
+      stop('wrong value for indexFutureYear')
+    }
   }
 
   ##############################################
@@ -1117,6 +1127,30 @@ plotQUALYPSOgetCI = function(QUALYPSOOUT,iBinf,iBsup){
   return(round((vecq[iBsup]-vecq[iBinf])*100))
 }
 
+#==============================================================================
+# printMessageDimension
+printMessageDimension = function(Y, scenAvail, vecYears){
+  # Y
+  dimY = dim(Y)
+  if(length(dimY)==2){
+    print(paste0('Y is a matrix of dimension nS=',dimY[1],' projections x nY=',dimY[2],' years'))
+  }else if(length(dimY)==3){
+    print(paste0('Y is an array of dimension nG=',dimY[1],' grid points x nS=',dimY[2],
+                 'projections x nY=',dimY[3],' years'))
+  }else(stop('Y must be a matrix nS x nY or a 3-dimension array  nG x nS x nY'))
+
+  # scenAvail
+  dimscenAvail = dim(scenAvail)
+  if(length(dimscenAvail)==2){
+    print(paste0('dimscenAvail is a matrix of dimension nS=',dimscenAvail[1],
+                 ' projections x nEff=',dimscenAvail[2],' effects'))
+  }else(stop('scenAvail must be a matrix nS x nEff'))
+
+  # vecYears
+  print("VecYears must be a vector of years or indices corresponding to the dimension 'time':")
+  print(vecYears)
+}
+
 
 #==============================================================================
 #' plotQUALYPSOTotalVarianceDecomposition
@@ -1138,7 +1172,7 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
                                                      xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
   # number of years
   vecYears = QUALYPSOOUT$vecYearsANOVA
-  nY = length(QUALYPSOOUT$vecYearsANOVA)
+  nY = length(vecYears)
 
   # Variance decomposition
   VV = QUALYPSOOUT$ANOVAVARIANCE
@@ -1185,5 +1219,96 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
 
     legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
   }
+}
 
+
+#==============================================================================
+#' plotQUALYPSOTotalVarianceByScenario
+#'
+#' Plot fraction of total variance explained by each source of uncertainty.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param iEff index in \code{scenAvail} corresponding to the scenarios (e.g. RCP scenarios)
+#' @param nameScenario name of the scenario to be plotted (as provided in \code{scenAvail})
+#' @param probCI probability for the dredible interval, =0.9 by default
+#' @param col colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively
+#' @param ylim y-axis limits
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,probCI=0.9,col=NULL,ylim=NULL,
+                                               xlab="Years",ylab="Change variable",addLegend=TRUE,...){
+  # number of years
+  vecYears = QUALYPSOOUT$vecYearsANOVA
+  nY = length(vecYears)
+
+  # which scenario
+  iScenario = which(QUALYPSOOUT$listScenarioInput$listEff[[iEff]] == nameScenario)
+
+  # mean prediction
+  meanPred = QUALYPSOOUT$ANOVAMEAN$ChangeByEffect[[iEff]][,iScenario]
+
+  # Variance decomposition
+  VV = QUALYPSOOUT$ANOVAVARIANCE
+
+  # remove effect corresponding to the scenarios from the total variance
+  Veff = VV$eff[-iEff,]
+
+  # concatenate variances
+  Vbind = cbind(Veff,VV$ResidualEffect,VV$InterVariability)
+  nEff = ncol(Vbind)-2
+  Vtot = rowSums(Vbind)
+  Vnorm = Vbind/replicate(n = ncol(Vbind), Vtot)
+
+  # reverse
+  vNormRev = apply(Vnorm,2,rev)
+
+
+  # compute the lower bound if the distribution is gaussian
+  binf = qnorm(p = (1-probCI)/2, mean = meanPred, sd = sqrt(VV$TotalVar))
+  bsup = qnorm(p = 0.5+probCI/2, mean = meanPred, sd = sqrt(VV$TotalVar))
+
+  # figure
+  if(is.null(col)){
+    default.col = c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1")
+    col = default.col[1:(nEff+2)]
+  }
+
+  # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
+  limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nY)
+  limIntInf[1,] = predict(loess(binf~vecYears))
+  limIntSup[1,] = predict(loess(bsup~vecYears))
+  for(i in 1:(nEff+1)){
+    binfi = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
+    limIntInf[i+1,] = predict(loess(binfi~vecYears))
+    bsupi = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
+    limIntSup[i+1,] = predict(loess(bsupi~vecYears))
+  }
+
+  # figure
+  if(is.null(ylim)) ylim = c(min(binf),max(bsup))
+  plot(-1,-1,xlim=range(vecYears),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
+  for(i in 1:(nEff+2)){
+    polygon(c(vecYears,rev(vecYears)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
+  }
+  lines(vecYears,predict(loess(meanPred~vecYears)),col="white",lwd=1)
+
+  # add horizontal lines
+  abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
+
+  # legend
+  if(addLegend){
+    if(is.null(colnames(QUALYPSOOUT$listScenarioInput$scenAvail))){
+      namesEff = paste0("Eff",1:nEff)
+    }else{
+      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)[-iEff]
+    }
+
+    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
+  }
 }

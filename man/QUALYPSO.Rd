@@ -14,13 +14,13 @@ QUALYPSO(Y, scenAvail, vecYears = NULL, indexReferenceYear = NULL,
 number of main effects which will be included in the ANOVA model.}
 
 \item{vecYears}{(optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
-mainly used for records. By default, a vector ```1:nY``` is created.}
+mainly used for records. By default, a vector \code{1:nY} is created.}
 
-\item{indexReferenceYear}{(optional) index in ```vecYears``` corresponding to the control year. For example, if \code{vecYears=1980:2100}
-and we want to specify a control year equals to 1990, we indicate ```indexReferenceYear=11``` or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
+\item{indexReferenceYear}{(optional) index in \code{vecYears} corresponding to the control year. For example, if \code{vecYears=1980:2100}
+and we want to specify a control year equals to 1990, we indicate \code{indexReferenceYear=11} or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
 \strong{if} \code{vecYears} is already available in the workspace}
 
-\item{indexFutureYear}{index in ```indexFutureYear``` corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
+\item{indexFutureYear}{index in \code{indexFutureYear} corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
 \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.}
 
 \item{listOption}{(optional) list of options
@@ -30,7 +30,7 @@ and we want to specify a control year equals to 1990, we indicate ```indexRefere
   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
   distributions of inferred parameters.
-  \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When 'nCluster' is greater than one, parallelization is used to
+  \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When \code{nCluster} is greater than one, parallelization is used to
   apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
   \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (if FALSE)
   or if only quantiles are retrieved (if TRUE). Equals TRUE by default
@@ -83,8 +83,8 @@ scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n,sd=0.5)
 Y = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
 
 # Here, scenAvail indicates that the first scenario is obtained with the combination of the
-# GCM "GCM1" and RCM "RCM1", the second #' # scenario is obtained with the combination of
-# the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with th combination
+# GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
+# the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
 # of the GCM "GCM2" and RCM "RCM1".
 scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 
@@ -97,18 +97,18 @@ scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
 # indexFutureYear.
 # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
-# characeristics nEff corresponds to the number of main effects which will be included in the
+# characteristics nEff corresponds to the number of main effects which will be included in the
 # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
 # and RCMs.
 
 # Many options can be specified in the argument "listOption". Here, we change the default values
-# for nBurn and nKeep in order to speed up computation time for this small example. However, note
-# that convergence and sampling of the posterior distributions often require higher values for these
-# two parameters.
+# for nBurn and nKeep in order to speed up computation time for this small example. However, it must
+# be noticed that convergence and sampling of the posterior distributions often require higher
+# values for these two parameters.
 listOption = list(nBurn=100,nKeep=100)
 
 # run QUALYPSO
-QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, listOption=listOption)
+QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2100, listOption=listOption)
 
 ##########################################################################
 # SOME PLOTS
@@ -124,6 +124,10 @@ plotQUALYPSOeffect(QUALYPSOOUT,iEff=2)
 
 # plot fraction of total variance for the differences sources of uncertainty
 plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
+
+# plot mean prediction and total variance with the differences sources of uncertainty
+# for one scenario (e.g. a RCP scenario)
+plotQUALYPSOTotalVarianceByScenario(QUALYPSOOUT,iEff=1,nameScenario='GCM1')
 
 }
 \references{
