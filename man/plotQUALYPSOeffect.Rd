@@ -4,9 +4,9 @@
 \alias{plotQUALYPSOeffect}
 \title{plotQUALYPSOeffect}
 \usage{
-plotQUALYPSOeffect(QUALYPSOOUT, iEff, includeMean = FALSE, iMedian = 7,
-  iBinf = 2, iBsup = 12, lim = NULL, col = 1:20, xlab = "Years",
-  ylab = "Effect", addLegend = TRUE, ...)
+plotQUALYPSOeffect(QUALYPSOOUT, iEff, includeMean = FALSE,
+  CIlevel = c(0.025, 0.975), lim = NULL, col = 1:20,
+  xlab = "Years", ylab = "Effect", addLegend = TRUE, ...)
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
@@ -15,11 +15,7 @@ plotQUALYPSOeffect(QUALYPSOOUT, iEff, includeMean = FALSE, iMedian = 7,
 
 \item{includeMean}{if TRUE, the grand mean is added to the main effect in the plot}
 
-\item{iMedian}{index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)}
-
-\item{iBinf}{index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)}
-
-\item{iBsup}{index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)}
+\item{CIlevel}{probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}}
 
 \item{lim}{y-axis limits (default is NULL)}
 

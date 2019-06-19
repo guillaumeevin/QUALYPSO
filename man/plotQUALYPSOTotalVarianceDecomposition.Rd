@@ -4,13 +4,15 @@
 \alias{plotQUALYPSOTotalVarianceDecomposition}
 \title{plotQUALYPSOTotalVarianceDecomposition}
 \usage{
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT, col = c("orange",
-  "yellow", "cadetblue1", "blue1", "darkgreen", "darkgoldenrod4",
-  "darkorchid1"), xlab = "Years", ylab = "\% Total Variance",
-  addLegend = TRUE, ...)
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT, vecEff = NULL,
+  col = c("orange", "yellow", "cadetblue1", "blue1", "darkgreen",
+  "darkgoldenrod4", "darkorchid1"), xlab = "Years",
+  ylab = "\% Total Variance", addLegend = TRUE, ...)
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
+
+\item{vecEff}{vector of indices corresponding to the main effects (NULL by default), so that the order of appearance in the plot can be modified}
 
 \item{col}{colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively}
 

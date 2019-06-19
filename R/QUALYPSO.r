@@ -209,6 +209,15 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
 
   #=============  initialize effects =================
   effect.POST = list()
+
+  if(any(is.na(phiStar.i))){
+    # when i corresponds to the reference period, phiStar.i = 0 and no ANOVA can be performed
+    # return 0 instead of NA for representations
+    mu.POST = sigma2.POST = rep(0,nMCMC)
+    for(i.eff in 1:nEff) effect.POST[[i.eff]] = matrix(0,nrow=nMCMC,ncol=nTypeEff[i.eff])
+    return(list(mu=mu.POST,sigma2=sigma2.POST,effect=effect.POST))
+  }
+
   if(all(phiStar.i==0)){
     # when i corresponds to the reference period, phiStar.i = 0 and no ANOVA can be performed
     # return 0 instead of NA for representations
@@ -528,7 +537,7 @@ QUALYPSO.check.option = function(listOption){
   }
 
   # Version
-  listOption[['version']] = 'v1.0.0'
+  listOption[['version']] = 'v1.1'
 
   return(listOption)
 }
@@ -563,10 +572,6 @@ QUALYPSO.check.option = function(listOption){
 #' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
 QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   #########  process input #########
-  if(any(is.na(phiStar))){
-    stop('na values are not allowed in phiStar')
-  }
-
   # number of grid points / years
   n = dim(phiStar)[2]
 
@@ -932,9 +937,27 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     # years when some simulation chains are missing (actually we could apply QUALYPSO to a different set of scenarios
     # each year but some configurations may fail if few scenarios are available, and it is difficult to identify in advance)
     hasNa = apply(phiStarAllTime,2,function(x) any(is.na(x)))
+
+    # if there are some runs which have only na values
+    if(all(hasNa)){
+      warning("Some runs leads to undefined variable changes (e.g. relative differences with a reference equals to 0)")
+      iRunNA = which(!apply(phiStarAllTime,1,function(x) all(is.na(x))))
+      if(any(iRunNA)){
+        print('try to run with runs on well-defined variable changes')
+        return(QUALYPSO(Y = Y[iRunNA,],scenAvail = scenAvail[iRunNA,],vecYears=vecYears,indexReferenceYear=indexReferenceYear,
+                        indexFutureYear=indexFutureYear,listOption=listOption))
+      }else{
+        warning('Error in QUALYPSO: check NAs (or computation of relative diff. with zeros) in Y')
+        return(NULL)
+      }
+    }
+
     # apply ANOVA after the reference year and when there is no na
     filterYearsAnova = 1:nY>indexReferenceYear&!hasNa
-    if(!any(filterYearsAnova)) stop('Error in QUALYPSO: check indexReferenceYear and NAs in Y')
+    if(!any(filterYearsAnova)){
+      warning('Error in QUALYPSO: check indexReferenceYear and NAs in Y')
+      return(NULL)
+    }
 
     # vector of years for ANOVA
     vecYearsANOVA = vecYears[filterYearsAnova]
@@ -996,9 +1019,7 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 #' Plot prediction of grand mean ensemble. By default, we plot the credible interval corresponding to a probability 0.95.
 #'
 #' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
-#' @param iMedian index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)
-#' @param iBinf index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)
-#' @param iBsup index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)
+#' @param CIlevel probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}
 #' @param lim y-axis limits (default is NULL)
 #' @param col color for the overall mean and the credible interval
 #' @param xlab x-axis label
@@ -1009,11 +1030,17 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOgrandmean = function(QUALYPSOOUT,iMedian=7,iBinf=2,iBsup=12,lim=NULL,
+plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
                                    col='black',xlab="Years",ylab="Grand mean",addLegend=T,
                                    ...){
   # vector of years
   vecYears = QUALYPSOOUT$vecYearsANOVA
+
+  # find index quantiles
+  iMedian = which(QUALYPSOOUT$listOption$quantileCompress==0.5)
+  iBinf = which(QUALYPSOOUT$listOption$quantileCompress==CIlevel[1])
+  iBsup = which(QUALYPSOOUT$listOption$quantileCompress==CIlevel[2])
+  if((length(iBinf)!=1)|(length(iBsup)!=1)) stop(paste0('Quantiles ',CIlevel, "are not available, check argument CIlevel"))
 
   # retrieve median and limits
   medRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iMedian]
@@ -1055,9 +1082,7 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,iMedian=7,iBinf=2,iBsup=12,lim=NULL
 #' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
 #' @param iEff index of the main effect to be plotted in \code{QUALYPSOOUT$listScenarioInput$listEff}
 #' @param includeMean if TRUE, the grand mean is added to the main effect in the plot
-#' @param iMedian index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)
-#' @param iBinf index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)
-#' @param iBsup index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)
+#' @param CIlevel probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}
 #' @param lim y-axis limits (default is NULL)
 #' @param col colors for each effect
 #' @param xlab x-axis label
@@ -1068,7 +1093,7 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,iMedian=7,iBinf=2,iBsup=12,lim=NULL
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,iMedian=7,iBinf=2,iBsup=12,lim=NULL,
+plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,CIlevel=c(0.025,0.975),lim=NULL,
                                    col=1:20,xlab="Years",ylab="Effect",addLegend=TRUE,
                                    ...){
   # vector of years
@@ -1081,6 +1106,12 @@ plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,iMedian=7,iBinf
     QUANTEff = QUALYPSOOUT$ANOVAQUANT$effect[[iEff]]
   }
   nEff = dim(QUANTEff)[3]
+
+  # find index quantiles
+  iMedian = which(QUALYPSOOUT$listOption$quantileCompress==0.5)
+  iBinf = which(QUALYPSOOUT$listOption$quantileCompress==CIlevel[1])
+  iBsup = which(QUALYPSOOUT$listOption$quantileCompress==CIlevel[2])
+  if((length(iBinf)!=1)|(length(iBsup)!=1)) stop(paste0('Quantiles ',CIlevel, "are not available, check argument CIlevel"))
 
   # retrieve median and limits
   medRaw = QUANTEff[,iMedian,]
@@ -1158,6 +1189,7 @@ printMessageDimension = function(Y, scenAvail, vecYears){
 #' Plot fraction of total variance explained by each source of uncertainty.
 #'
 #' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param vecEff vector of indices corresponding to the main effects (NULL by default), so that the order of appearance in the plot can be modified
 #' @param col colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively
 #' @param xlab x-axis label
 #' @param ylab y-axis label
@@ -1167,7 +1199,7 @@ printMessageDimension = function(Y, scenAvail, vecYears){
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
+plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
                                                      col=c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1"),
                                                      xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
   # number of years
@@ -1177,22 +1209,21 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
   # Variance decomposition
   VV = QUALYPSOOUT$ANOVAVARIANCE
 
+
   # number of main effects
-  nEff = nrow(VV$eff)
-
-  # initialise matrix variances
-  vNorm = matrix(nrow=nEff+2,ncol=nY)
-
-  # part of variance due to the different effects
-  for(iEff in 1: nEff){
-    vNorm[iEff,] = VV$eff[iEff,]/VV$TotalVar
+  if(is.null(vecEff)){
+    vecEff = 1:nrow(VV$eff)
   }
 
-  # Residual variance
-  vNorm[nEff+1,] = VV$ResidualEffect/VV$TotalVar
+  # select effects
+  Veff = VV$eff[vecEff,]
+  nEff = nrow(Veff)
 
-  # Internal variability
-  vNorm[nEff+2,] = VV$InterVariability/VV$TotalVar
+  # concatenate variances
+  Vbind = rbind(Veff,VV$ResidualEffect,VV$InterVariability)
+  Vtot = colSums(Vbind)
+  Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
+
 
 
   # figure
@@ -1202,7 +1233,7 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
        xlab=xlab,ylab=ylab,...)
   for(i in 1:(nEff+2)){
     cumPrevious = cum.smooth
-    cum = cum + vNorm[i,]
+    cum = cum + Vnorm[i,]
     cum.smooth = predict(loess(cum~vecYears))
     cum.smooth[cum.smooth<0] = 0
     polygon(c(vecYears,rev(vecYears)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
@@ -1212,9 +1243,9 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,
   # legend
   if(addLegend){
     if(is.null(colnames(QUALYPSOOUT$listScenarioInput$scenAvail))){
-      namesEff = paste0("Eff",1:nEff)
+      namesEff = paste0("Eff",vecEff)
     }else{
-      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)
+      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)[vecEff]
     }
 
     legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
@@ -1260,18 +1291,18 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,pro
   Veff = VV$eff[-iEff,]
 
   # concatenate variances
-  Vbind = cbind(Veff,VV$ResidualEffect,VV$InterVariability)
-  nEff = ncol(Vbind)-2
-  Vtot = rowSums(Vbind)
-  Vnorm = Vbind/replicate(n = ncol(Vbind), Vtot)
+  Vbind = rbind(Veff,VV$ResidualEffect,VV$InterVariability)
+  nEff = nrow(Vbind)-2
+  Vtot = colSums(Vbind)
+  Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
 
   # reverse
   vNormRev = apply(Vnorm,2,rev)
 
 
   # compute the lower bound if the distribution is gaussian
-  binf = qnorm(p = (1-probCI)/2, mean = meanPred, sd = sqrt(VV$TotalVar))
-  bsup = qnorm(p = 0.5+probCI/2, mean = meanPred, sd = sqrt(VV$TotalVar))
+  binf = qnorm(p = (1-probCI)/2, mean = meanPred, sd = sqrt(Vtot))
+  bsup = qnorm(p = 0.5+probCI/2, mean = meanPred, sd = sqrt(Vtot))
 
   # figure
   if(is.null(col)){

@@ -4,18 +4,14 @@
 \alias{plotQUALYPSOgrandmean}
 \title{plotQUALYPSOgrandmean}
 \usage{
-plotQUALYPSOgrandmean(QUALYPSOOUT, iMedian = 7, iBinf = 2,
-  iBsup = 12, lim = NULL, col = "black", xlab = "Years",
-  ylab = "Grand mean", addLegend = T, ...)
+plotQUALYPSOgrandmean(QUALYPSOOUT, CIlevel = c(0.025, 0.975),
+  lim = NULL, col = "black", xlab = "Years", ylab = "Grand mean",
+  addLegend = T, ...)
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
 
-\item{iMedian}{index corresponding to the median (Pr=0.5) in \code{QUALYPSOOUT$listOption$quantileCompress} (default=7)}
-
-\item{iBinf}{index corresponding to the lower bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=2)}
-
-\item{iBsup}{index corresponding to the upper bound in \code{QUALYPSOOUT$listOption$quantileCompress} (default=12)}
+\item{CIlevel}{probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}}
 
 \item{lim}{y-axis limits (default is NULL)}
 
