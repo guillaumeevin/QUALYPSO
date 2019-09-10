@@ -64,8 +64,8 @@ Partition uncertainty in climate responses using an ANOVA inferred with a Bayesi
 ##########################################################################
 # SYNTHETIC SCENARIOS
 ##########################################################################
-# create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=100 years
-n=100
+# create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=20 years
+n=20
 t=1:n/n
 
 # GCM effects (sums to 0 for each t)
@@ -105,10 +105,10 @@ scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 # for nBurn and nKeep in order to speed up computation time for this small example. However, it must
 # be noticed that convergence and sampling of the posterior distributions often require higher
 # values for these two parameters.
-listOption = list(nBurn=100,nKeep=100)
+listOption = list(nBurn=100,nKeep=100,quantileCompress=c(0.025,0.5,0.975))
 
 # run QUALYPSO
-QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2100, listOption=listOption)
+QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2020, listOption=listOption)
 
 ##########################################################################
 # SOME PLOTS

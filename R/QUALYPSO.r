@@ -641,6 +641,14 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
     varEffect[i.eff,] = apply(eff.POST[[i.eff]]^2,1,mean)
   }
 
+  # variance of individual effects
+  contribEffect = list()
+  for(i.eff in 1:nEff){
+    contribEffect[[i.eff]] = matrix(nrow=nTypeEff[i.eff],ncol=y.POST)
+    for(iIndEff in 1:nTypeEff[i.eff]){
+      contribEffect[[i.eff]][iIndEff,] = apply(eff.POST[[i.eff]][,,iIndEff]^2,1,mean)/(varEffect[i.eff,]*nTypeEff[i.eff])
+    }
+  }
 
   #============================
   # QUANTILES
@@ -739,7 +747,9 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   if(listOption$doCompress) POST=NULL
 
   # return results
-  return(list(POSTERIOR=POST,QUANT=QUANT,MEAN=MEAN,varEffect=varEffect,varResidualEffect=varResidualEffect,
+  return(list(POSTERIOR=POST,QUANT=QUANT,MEAN=MEAN,
+              varEffect=varEffect,contribEffect=contribEffect,
+              varResidualEffect=varResidualEffect,
               listOption=listOption,listScenarioInput=listScenarioInput))
 
 }
@@ -798,8 +808,8 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' ##########################################################################
 #' # SYNTHETIC SCENARIOS
 #' ##########################################################################
-#' # create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=100 years
-#' n=100
+#' # create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=20 years
+#' n=20
 #' t=1:n/n
 #'
 #' # GCM effects (sums to 0 for each t)
@@ -839,10 +849,10 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' # for nBurn and nKeep in order to speed up computation time for this small example. However, it must
 #' # be noticed that convergence and sampling of the posterior distributions often require higher
 #' # values for these two parameters.
-#' listOption = list(nBurn=100,nKeep=100)
+#' listOption = list(nBurn=100,nKeep=100,quantileCompress=c(0.025,0.5,0.975))
 #'
 #' # run QUALYPSO
-#' QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2100, listOption=listOption)
+#' QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2020, listOption=listOption)
 #'
 #' ##########################################################################
 #' # SOME PLOTS
@@ -999,6 +1009,7 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
   # format variance
   ANOVAVARIANCE = list()
   ANOVAVARIANCE$eff = anova$varEffect
+  ANOVAVARIANCE$contribEffect = anova$contribEffect
   ANOVAVARIANCE$ResidualEffect = anova$varResidualEffect
   ANOVAVARIANCE$InterVariability = varInterVariability
   ANOVAVARIANCE$TotalVar = Rfast::colsums(anova$varEffect) + anova$varResidualEffect + varInterVariability
