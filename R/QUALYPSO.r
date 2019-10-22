@@ -131,10 +131,11 @@ fit.climate.response = function(Y, parSmooth, indexReferenceYear, typeChangeVari
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
-    phiS = rep(NA,nY)
     smooth.spline.out<-stats::smooth.spline((1:nY)[zz],Ys[zz],spar=parSmooth)
+
+    # fitted responses at unnown points
     climateResponse[[iS]] = smooth.spline.out
-    phiS[zz] = smooth.spline.out$y
+    phiS = predict(smooth.spline.out, 1:nY)$y
 
     # store climate response for this simulation chain
     phi[iS,] = phiS
@@ -537,7 +538,7 @@ QUALYPSO.check.option = function(listOption){
   }
 
   # Version
-  listOption[['version']] = 'v1.1'
+  listOption[['version']] = 'v1.2'
 
   return(listOption)
 }
@@ -933,6 +934,19 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     }
   }
 
+
+  ##############################################
+  # check presence of NAs in climate projections
+  if(paralType == 'Time'){
+    # check is some simulation chains are entirely missing
+    hasAllNa = apply(Y,1,function(x) all(is.na(x)))
+
+    if(any(hasAllNa)){
+      warning(paste0('Error in QUALYPSO: some simulation chains have only NAs in Y: ',paste(which(hasAllNa),collapse = ',')))
+      return(NULL)
+    }
+  }
+
   ##############################################
   # extract climate response
   if(paralType == 'Time'){
@@ -944,30 +958,8 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     etaStarAllTime = climResponse$etaStar
     phiAllTime = climResponse$phi
 
-    # years when some simulation chains are missing (actually we could apply QUALYPSO to a different set of scenarios
-    # each year but some configurations may fail if few scenarios are available, and it is difficult to identify in advance)
-    hasNa = apply(phiStarAllTime,2,function(x) any(is.na(x)))
-
-    # if there are some runs which have only na values
-    if(all(hasNa)){
-      warning("Some runs leads to undefined variable changes (e.g. relative differences with a reference equals to 0)")
-      iRunNA = which(!apply(phiStarAllTime,1,function(x) all(is.na(x))))
-      if(any(iRunNA)){
-        print('try to run with runs on well-defined variable changes')
-        return(QUALYPSO(Y = Y[iRunNA,],scenAvail = scenAvail[iRunNA,],vecYears=vecYears,indexReferenceYear=indexReferenceYear,
-                        indexFutureYear=indexFutureYear,listOption=listOption))
-      }else{
-        warning('Error in QUALYPSO: check NAs (or computation of relative diff. with zeros) in Y')
-        return(NULL)
-      }
-    }
-
-    # apply ANOVA after the reference year and when there is no na
-    filterYearsAnova = 1:nY>indexReferenceYear&!hasNa
-    if(!any(filterYearsAnova)){
-      warning('Error in QUALYPSO: check indexReferenceYear and NAs in Y')
-      return(NULL)
-    }
+    # subset of years, starting from the reference year
+    filterYearsAnova = 1:nY>indexReferenceYear
 
     # vector of years for ANOVA
     vecYearsANOVA = vecYears[filterYearsAnova]
@@ -982,14 +974,26 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     phiStarAllTime = etaStarAllTime = phiAllTime = array(dim=d)
     varInterVariability = vector(length=nG)
     for(g in 1:nG){
-      climResponse[[g]] = fit.climate.response(Y[g,,], parSmooth=listOption$parSmooth,indexReferenceYear=indexReferenceYear,
-                                               typeChangeVariable=listOption$typeChangeVariable)
+      # check is some simulation chains are entirely missing
+      hasAllNa = apply(Y[g,,],1,function(x) all(is.na(x)))
 
-      # extract quantities from these fits
-      phiStarAllTime[g,,] = climResponse[[g]]$phiStar
-      etaStarAllTime[g,,] = climResponse[[g]]$etaStar
-      phiAllTime[g,,] = climResponse[[g]]$phi
-      varInterVariability[g] = climResponse[[g]]$varInterVariability
+      if(any(hasAllNa)){
+        climResponse[[g]] = NULL
+        phiStarAllTime[g,,] = NA
+        etaStarAllTime[g,,] = NA
+        phiAllTime[g,,] = NA
+        varInterVariability[g] = NA
+      }else{
+        climResponse[[g]] = fit.climate.response(Y[g,,], parSmooth=listOption$parSmooth,indexReferenceYear=indexReferenceYear,
+                                                 typeChangeVariable=listOption$typeChangeVariable)
+
+        # extract quantities from these fits
+        phiStarAllTime[g,,] = climResponse[[g]]$phiStar
+        etaStarAllTime[g,,] = climResponse[[g]]$etaStar
+        phiAllTime[g,,] = climResponse[[g]]$phi
+        varInterVariability[g] = climResponse[[g]]$varInterVariability
+      }
+
     }
 
     # phiStar for ANOVA
