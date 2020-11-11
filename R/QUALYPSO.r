@@ -183,7 +183,6 @@ fit.climate.response = function(Y, parSmooth, indexReferenceYear, typeChangeVari
 #'   \item \strong{mu}: vector of length \code{nMCMC}, mean climate change response
 #'   \item \strong{sigma2}: vector of length \code{nMCMC}, variance of the residual terms
 #'   \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
-#'   \item \strong{empEff}: list with \code{nTypeEmpEff} elements, where each element corresponds to an empirical effect
 #'   Each element is a matrix \code{nMCMC} x \code{nMaineff}, and \code{nMaineff} is the number of main effects (e.g. number of GCMs, RCMs, etc.)
 #' }
 #'
@@ -205,7 +204,6 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
   iMatchScen=listScenarioInput$iMatchScen
   indexEffInCompScen=listScenarioInput$indexEffInCompScen
   Qmat=listScenarioInput$Qmat
-  objEmpEff=listScenarioInput$objEmpEf
 
 
   #=============  initialize effects =================
@@ -233,17 +231,6 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
     for(i.eff in 1:nEff) effect.POST[[i.eff]] = matrix(nrow=nMCMC,ncol=nTypeEff[i.eff])
   }
 
-
-  #=============  treat effects for which only empirical effects are computed if needed =================
-  if(!is.null(listScenarioInput$objEmpEff)){
-    nEmpEff = objEmpEff$nEmpEff
-    nTypeEmpEff= objEmpEff$nTypeEmpEff
-    indexEmpEffInCompScen = objEmpEff$indexEmpEffInCompScen
-    empEff.POST = list()
-    for(i.empEff in 1:nEmpEff)  empEff.POST[[i.empEff]] = matrix(data = 0, nrow=nMCMC,ncol=nTypeEmpEff[i.empEff])
-  }else{
-    empEff.POST = NULL
-  }
 
 
   ###################################################################
@@ -330,25 +317,11 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
     mean.X = mu + Rfast::rowsums(mat.eff)
     sd.X = sqrt(s2)
     phi2comp[isMissing] = rnorm(n=nMissing, mean=mean.X[isMissing], sd=rep(sd.X,nMissing)) # Eq A14
-
-
-    #_____ empirical effects ________
-    if(!is.null(objEmpEff)){
-      # xi
-      xi = phi2comp - mu - Rfast::rowsums(mat.eff)
-      for(i.empEff in 1:nEmpEff){
-        for(iType in 1:nTypeEmpEff[i.empEff]){
-          selEmpEff = which(objEmpEff$indexEmpEffInAvailScen[,i.empEff] == iType)
-          empEff.POST[[i.empEff]][i.MCMC,iType] = mean(xi[match(selEmpEff,iMatchScen)])
-        }
-      }
-
-    }
   }
 
 
   # return MCM samples from the posterior
-  return(list(mu=mu.POST,sigma2=sigma2.POST,effect=effect.POST,empEff=empEff.POST))
+  return(list(mu=mu.POST,sigma2=sigma2.POST,effect=effect.POST))
 }
 
 #==============================================================================
@@ -357,54 +330,14 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
 #' Process input scenarios.
 #'
 #' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
-#' @param computeEmpEff vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically
 #'
 #' @return list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
-#' indexEffInCompScen, Qmat, EmpEff})
+#' indexEffInCompScen, Qmat})
 #'
 #' @author Guillaume Evin
-QUALYPSO.process.scenario = function(scenAvail,computeEmpEff){
+QUALYPSO.process.scenario = function(scenAvail){
   # number of scenarios
   nS = nrow(scenAvail)
-
-  # empirical interactions
-  if(!is.null(computeEmpEff)){
-    # check input
-    if(!computeEmpEff%in%1:nS) stop('computeEmpEff must be a vector of column indices in scenAvail')
-
-    # number of effects for which we compute empirical interactions
-    nEmpEff = length(computeEmpEff)
-
-    # prepare length of types of effect
-    nTypeEmpEff = vector(length=nEmpEff)
-
-    # list of unique effects
-    listEmpEff = list()
-
-    # find indices of the effects in available scenarios
-    indexEmpEffInAvailScen = matrix(nrow=nS,ncol=nEmpEff)
-
-
-    for(i.eff in 1:nEmpEff){
-      indexEmpEff = computeEmpEff[i.eff]
-      vecEmpEff = scenAvail[,indexEmpEff]
-      # unique effects
-      UniqueEmpEff  = unique(vecEmpEff)
-      listEmpEff[[i.eff]] = UniqueEmpEff
-      nTypeEmpEff[i.eff] = length(UniqueEmpEff)
-      # find indices of the effects in available scenarios
-      indexEmpEffInAvailScen[,i.eff] = match(vecEmpEff,UniqueEmpEff)
-    }
-
-    # modify scenAvail
-    scenAvail = scenAvail[,-computeEmpEff]
-
-    # return object
-    objEmpEff = list(computeEmpEff=computeEmpEff,nEmpEff=nEmpEff,nTypeEmpEff=nTypeEmpEff,listEmpEff=listEmpEff,
-                     indexEmpEffInAvailScen=indexEmpEffInAvailScen)
-  }else{
-    objEmpEff = NULL
-  }
 
   # list of effects
   nEff = ncol(scenAvail)
@@ -448,7 +381,7 @@ QUALYPSO.process.scenario = function(scenAvail,computeEmpEff){
               isMissing=isMissing, nMissing=nMissing,
               iMatchScen=iMatchScen,
               indexEffInCompScen=indexEffInCompScen,
-              Qmat=Qmat, objEmpEff=objEmpEff))
+              Qmat=Qmat))
 }
 
 
@@ -470,7 +403,7 @@ QUALYPSO.check.option = function(listOption){
   # parSmooth
   if('parSmooth' %in% names(listOption)){
     parSmooth = listOption[['parSmooth']]
-    if(!(is.numeric(parSmooth)&(parSmooth>0&parSmooth<=1))) stop('parSmooth must be in ]0,1]')
+    if(!(is.numeric(parSmooth)&(parSmooth>0&parSmooth<=10))) stop('parSmooth must be in ]0,10]')
   }else{
     listOption[['parSmooth']] = 1
   }
@@ -502,31 +435,12 @@ QUALYPSO.check.option = function(listOption){
   # nMCMC
   listOption$nMCMC = listOption$nKeep+listOption$nBurn
 
-
   # nCluster
   if('nCluster' %in% names(listOption)){
     nCluster = listOption[['nCluster']]
     if(!(is.numeric(nCluster)&(nCluster>=0))) stop('wrong value for nCluster')
   }else{
     listOption[['nCluster']] = 1
-  }
-
-  # doCompress
-  if('doCompress' %in% names(listOption)){
-    doCompress = listOption[['doCompress']]
-    if(!(is.logical(doCompress))) stop('wrong value for doCompress')
-  }else{
-    listOption[['doCompress']] = TRUE
-  }
-
-  # computeEmpEff
-  if('computeEmpEff' %in% names(listOption)){
-    computeEmpEff = listOption[['computeEmpEff']]
-    if(!(is.vector(computeEmpEff)&is.numeric(computeEmpEff))){
-      stop('computeEmpEff must be a vector of column indices in scenAvail')
-    }
-  }else{
-    listOption[['computeEmpEff']] = NULL
   }
 
   # quantileCompress
@@ -555,7 +469,6 @@ QUALYPSO.check.option = function(listOption){
 #'
 #' @return  list with the following fields:
 #' \itemize{
-#'   \item \strong{POSTERIOR}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
 #'   \item \strong{QUANT}: list of quantiles from the posterior distributions of inferred quantities
 #'   \item \strong{MEAN}: list of mean of the posterior distributions of inferred quantities
 #'   \item \strong{varEffect}: matrix \code{nEff} x \code{n} of variances related to the main effects
@@ -584,7 +497,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   vec.keep = (listOption$nBurn+1):listOption$nMCMC
 
   # Process scenarios data.frame to get different objects
-  listScenarioInput = QUALYPSO.process.scenario(scenAvail = scenAvail,computeEmpEff = listOption$computeEmpEff)
+  listScenarioInput = QUALYPSO.process.scenario(scenAvail = scenAvail)
   nEff = listScenarioInput$nEff
   nTypeEff = listScenarioInput$nTypeEff
 
@@ -622,8 +535,6 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
     for(y in 1:y.POST) eff.POST.i[y,,]=Anova.POST[[y]]$effect[[i.eff]][vec.keep,]
     eff.POST[[i.eff]] = eff.POST.i
   }
-
-  POST = list(mu=mu.POST,sigma2=sigma2.POST,effect=eff.POST)
 
 
   #============================
@@ -708,47 +619,8 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   QUANT$ChangeByEffect = quantChangebyEffect
 
 
-  #============================
-  # EMPIRICAL EFFECTS
-  #============================
-
-  if(!is.null(listOption$computeEmpEff)){
-    objEmpEff = listScenarioInput$objEmpEff
-    nEmpEff = objEmpEff$nEmpEff
-    nTypeEmpEff = objEmpEff$nTypeEmpEff
-
-    #========= mean interactions =========
-    empEff.POST = list()
-    for(i.empEff in 1:nEmpEff){
-      # trim posterior distributions of the main effects
-      empEff.POST.i = array(dim=c(y.POST,nKeep,nTypeEmpEff[i.empEff]))
-      for(y in 1:y.POST) empEff.POST.i[y,,]=Anova.POST[[y]]$empEff[[i.empEff]][vec.keep,]
-      empEff.POST[[i.empEff]] = empEff.POST.i
-    }
-    POST$empEff = empEff.POST
-
-    #========= quantiles =========
-    empEff.QUANT = list()
-    for(i.empEff in 1:nEmpEff){
-      empEff.quant.i = apply(empEff.POST[[i.empEff]],c(1,3),quantile,probs=listOption$quantileCompress)
-      empEff.QUANT[[i.empEff]] = aperm(empEff.quant.i, c(2,1,3))
-    }
-    QUANT$empEff = empEff.QUANT
-
-    #========= mean =========
-    empEff.Mean = list()
-    for(i.empEff in 1:nEmpEff){
-      empEff.Mean[[i.empEff]] = apply(empEff.POST[[i.empEff]],c(1,3),mean)
-    }
-    MEAN$empEff = empEff.Mean
-  }
-
-  # if doCompress is true, we do not return all the samples from the posterior distributions
-  # which saves memory
-  if(listOption$doCompress) POST=NULL
-
   # return results
-  return(list(POSTERIOR=POST,QUANT=QUANT,MEAN=MEAN,
+  return(list(QUANT=QUANT,MEAN=MEAN,
               varEffect=varEffect,contribEffect=contribEffect,
               varResidualEffect=varResidualEffect,
               listOption=listOption,listScenarioInput=listScenarioInput))
@@ -774,17 +646,13 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.
 #' @param listOption (optional) list of options
 #' \itemize{
-#'   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]
+#'   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
 #'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
 #'   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
 #'   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
 #'   distributions of inferred parameters.
 #'   \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When \code{nCluster} is greater than one, parallelization is used to
 #'   apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
-#'   \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (if FALSE)
-#'   or if only quantiles are retrieved (if TRUE). Equals TRUE by default
-#'   \item \strong{computeEmpEff}: vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically (e.g. interactions) when
-#'   the number of available runs is not sufficient to identify / estimate these additional effects.
 #'   \item \strong{quantileCompress}: vector of probabilities (in [0,1]) for which we compute the quantiles from the posterior distributions
 #'    \code{quantileCompress = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default
 #' }
@@ -793,13 +661,42 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' \itemize{
 #'   \item \strong{CLIMATEESPONSE}: list of climate change responses and corresponding internal variability. Contains \code{phiStar} (climate change responses),
 #'   \code{etaStar} (deviation from the climate change responses as a result of internal variability), and \code{phi} (fitted climate responses)
-#'   \item \strong{ANOVAPOST}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
-#'   \item \strong{ANOVAQUANT}: list of quantiles from the posterior distributions of inferred quantities
-#'   \item \strong{ANOVAMEAN}: list of mean of the posterior distributions of inferred quantities
-#'   Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-#'   \item \strong{ANOVAVARIANCE}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
+#'   \item \strong{BAYES}: list of inferred quantities: quantiles from the posterior distributions are provided
+#'   \itemize{
+#'       \item GRANDMEAN: Grand mean
+#'       \item MAINEFFECT: Main effects
+#'       \item RESIDUALVAR_MEAN: mean of the posterior distribution for the residual variability \eqn{\sigma^2}
+#'       \item RESIDUALVAR_QUANT: quantiles of the posterior distribution for the residual variability \eqn{\sigma^2}
+#'       \item INTERNALVAR: Internal variability (constant over time)
+#'       \item EFFECTVAR: Variability related to the main effects (i.e. variability between the different RCMs, GCMs,..)
+#'       \item TOTALVAR: total variability, i.e. the sum of internal variability, residual variability and
+#'       variability related to the main effect
+#'       \item DECOMPVAR: Decomposition of the total variability for each component
+#'       \item CONTRIB_EACH_EFFECT: Contribution of each individual effect to its component (percentage), e.g. what
+#'       is the contribution of GCM1 to the variability related to GCMs
+#'       \item CHANGEBYEFFECT: For each main effect, mean change by type of effect, i.e. mean change by scenario (RCP4.5)
+#'   }
+#'   \item \strong{POINT}: list of point estimates: mean of the posterior distributions
+#'   \itemize{
+#'       \item GRANDMEAN: Grand mean
+#'       \item MAINEFFECT: Main effects
+#'       \item RESIDUALVAR: Variance of residual errors computed from the differences between the climate change responses
+#'       and the additive anova formula (grand mean + main effects)
+#'       \item INTERNALVAR: Internal variability (constant over time)
+#'       \item EFFECTVAR: Variability related to the main effects (i.e. variability between the different RCMs, GCMs,..)
+#'       \item TOTALVAR: total variability, i.e. the sum of internal variability, residual variability and
+#'       variability related to the main effect
+#'       \item DECOMPVAR: Decomposition of the total variability for each component
+#'       \item CONTRIB_EACH_EFFECT: Contribution of each individual effect to its component (percentage), e.g. what
+#'       is the contribution of GCM1 to the variability related to GCMs
+#'       \item CHANGEBYEFFECT: For each main effect, mean change by type of effect, i.e. mean change by scenario (RCP4.5)
+#'       \item RESERR: differences between the climate change responses and the additive anova formula (grand mean + main effects)
+#'   }
+#'
 #'   \item \strong{vecYears}: vector of years
 #'   \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+#'   \item \strong{paralType}: type of parallelisation (Time or Grid)
+#'   \item \strong{namesEff}: names of the main effects
 #'   \item \strong{Y}: matrix of available combinations given as inputs
 #'   \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
 #'   \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
@@ -935,6 +832,8 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
   }
 
 
+
+
   ##############################################
   # check presence of NAs in climate projections
   if(paralType == 'Time'){
@@ -1004,25 +903,133 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
   }
 
 
-  #############################################
+  #====================================================================================================
   # ANOVA on phiStar
   anova = QUALYPSO.ANOVA(phiStar = phiStar, scenAvail = scenAvail, listOption = listOption)
 
 
+  # names of the main effect
+  if(is.null(colnames(scenAvail))){
+    namesEff = paste0("Eff",1:ncol(scenAvail))
+  }else{
+    namesEff = colnames(scenAvail)
+  }
+
+  #====================================================================================================
+  # further computation using point estimates
+
+  # first retrieve point estimates and some quantities
+  effhat = anova$MEAN$effect
+  muHat = anova$MEAN$mu
+  listEff = anova$listScenarioInput$listEff
+  nEff = length(effhat)
+  nP = nrow(effhat[[1]])
+
+  # retrieve residual errors: differences between the climate change responses
+  # and the additive effects (grand mean + main effect)
+  mat.eff = matrix(nrow=nEff,ncol=nP)
+  resErr = matrix(nrow=nS,ncol=nP)
+  for(iS in 1:nS){
+    for(iE in 1:nEff){
+      mat.eff[iE,] = effhat[[iE]][,which(scenAvail[iS,iE]==listEff[[iE]])]
+    }
+    resErr[iS,] = phiStar[iS,1:nP] - muHat - Rfast::colsums(mat.eff)
+  }
+
+  # compute point estimates of the variances
+  RESIDUALVAR_POINT = apply(resErr,2,function(x) mean((x)^2))
+  EFFECTVAR_POINT = matrix(nrow=nEff,ncol=nP)
+  for(iEff in 1:nEff) EFFECTVAR_POINT[iEff,] = apply(effhat[[iEff]],1,function(x) mean((x)^2))
+
+  # variance of individual effects
+  CONTRIB_EACH_EFFECT_POINT = list()
+  for(i.eff in 1:nEff){
+    nIndEff = length(listEff[[i.eff]])
+    CONTRIB_EACH_EFFECT_POINT[[i.eff]] = matrix(nrow=nIndEff,ncol=nP)
+    for(iIndEff in 1:nIndEff){
+      CONTRIB_EACH_EFFECT_POINT[[i.eff]][iIndEff,] = effhat[[i.eff]][,iIndEff]^2/(EFFECTVAR_POINT[i.eff,]*nIndEff)
+    }
+  }
+
+  #====================================================================================================
+  # BAYESIAN ESTIMATES
+  #
+  # Format output concerning Bayesian estimates, which include the uncertainty relaed to the parameter
+  # estimation
+  BAYES = list()
+
+  # first grand mean, main effects and mean change by effets (i.e. mean + effects)
+  BAYES$GRANDMEAN = anova$QUANT$mu
+  BAYES$MAINEFFECT = anova$QUANT$effect
+  BAYES$CHANGEBYEFFECT = anova$QUANT$ChangeByEffect
+
+  # residual variability (mean and quantiles)
+  BAYES$RESIDUALVAR_MEAN = anova$varResidualEffect
+  BAYES$RESIDUALVAR_QUANT = anova$QUANT$sigma2
+
+  # internal variability
+  BAYES$INTERNALVAR = varInterVariability
+
+  # variances due to the main effects
+  BAYES$EFFECTVAR = anova$varEffect
+
+  # Total variability
+  BAYES$TOTALVAR = Rfast::colsums(anova$varEffect) + anova$varResidualEffect + varInterVariability
+
+  # variance decomposition
+  Vbind = rbind(BAYES$EFFECTVAR,BAYES$RESIDUALVAR_MEAN,BAYES$INTERNALVAR)
+  DECOMPVAR = Vbind/t(replicate(n = nrow(Vbind), BAYES$TOTALVAR))
+  rownames(DECOMPVAR) = c(namesEff,"ResidualVar","InternalVar")
+  BAYES$DECOMPVAR = DECOMPVAR
+
+  # CONTRIBUTION OF INDIVIDUAL EFFECTS TO THEIR VARIANCE
+  BAYES$CONTRIB_EACH_EFFECT = anova$contribEffect
+
+
+
+  #====================================================================================================
+  # POINT ESTIMATES
+  #
+  # provide point estimates from the posterior distributions and provide related variances (ignoring
+  # uncertainty related to the parameter estimation)
+  POINT = list()
+
+  # first grand mean, main effects and mean change by effets (i.e. mean + effects)
+  # the mean of the posterior distributions is taken as the best point estimate
+  POINT$GRANDMEAN = anova$MEAN$mu
+  POINT$MAINEFFECT = anova$MEAN$effect
+  POINT$CHANGEBYEFFECT = anova$MEAN$ChangeByEffect
+
+  # residual variability (mean and quantiles)
+  POINT$RESIDUALVAR = RESIDUALVAR_POINT
+
+  # internal variability
+  POINT$INTERNALVAR = varInterVariability
+
+  # variances due to the main effects
+  POINT$EFFECTVAR = EFFECTVAR_POINT
+
+  # Total variability
+  POINT$TOTALVAR = Rfast::colsums(POINT$EFFECTVAR) + POINT$RESIDUALVAR + POINT$INTERNALVAR
+
+  # variance decomposition
+  Vbind = rbind(POINT$EFFECTVAR,POINT$RESIDUALVAR,POINT$INTERNALVAR)
+  DECOMPVAR = Vbind/t(replicate(n = nrow(Vbind), POINT$TOTALVAR))
+  rownames(DECOMPVAR) = c(namesEff,"ResidualVar","InternalVar")
+  POINT$DECOMPVAR = DECOMPVAR
+
+  # CONTRIBUTION OF INDIVIDUAL EFFECTS TO THEIR VARIANCE
+  POINT$CONTRIB_EACH_EFFECT = CONTRIB_EACH_EFFECT_POINT
+
+  # Add residual errors for further computation
+  POINT$RESERR = resErr
+
+
   #############################################
-  # format variance
-  ANOVAVARIANCE = list()
-  ANOVAVARIANCE$eff = anova$varEffect
-  ANOVAVARIANCE$contribEffect = anova$contribEffect
-  ANOVAVARIANCE$ResidualEffect = anova$varResidualEffect
-  ANOVAVARIANCE$InterVariability = varInterVariability
-  ANOVAVARIANCE$TotalVar = Rfast::colsums(anova$varEffect) + anova$varResidualEffect + varInterVariability
-
-
   # return results
   return(list(CLIMATEESPONSE=list(phiStar=phiStarAllTime,etaStar=etaStarAllTime,phi=phiAllTime),
-              ANOVAPOST=anova$POSTERIOR,ANOVAQUANT=anova$QUANT,ANOVAMEAN=anova$MEAN,paralType=paralType,
-              ANOVAVARIANCE=ANOVAVARIANCE,vecYears=listOption$vecYears,vecYearsANOVA=vecYearsANOVA,
+              BAYES=BAYES,POINT=POINT,
+              vecYears=listOption$vecYears,vecYearsANOVA=vecYearsANOVA,paralType=paralType,namesEff=namesEff,
               Y=Y,listOption=anova$listOption,listScenarioInput=anova$listScenarioInput))
 }
 
@@ -1046,8 +1053,8 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 #'
 #' @author Guillaume Evin
 plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
-                                   col='black',xlab="Years",ylab="Grand mean",addLegend=T,
-                                   ...){
+                                 col='black',xlab="Years",ylab="Grand mean",addLegend=T,
+                                 ...){
   # vector of years
   vecYears = QUALYPSOOUT$vecYearsANOVA
 
@@ -1058,9 +1065,9 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
   if((length(iBinf)!=1)|(length(iBsup)!=1)) stop(paste0('Quantiles ',CIlevel, "are not available, check argument CIlevel"))
 
   # retrieve median and limits
-  medRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iMedian]
-  binfRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iBinf]
-  bsupRaw = QUALYPSOOUT$ANOVAQUANT$mu[,iBsup]
+  medRaw = QUALYPSOOUT$BAYES$GRANDMEAN[,iMedian]
+  binfRaw = QUALYPSOOUT$BAYES$GRANDMEAN[,iBinf]
+  bsupRaw = QUALYPSOOUT$BAYES$GRANDMEAN[,iBsup]
 
   # get smooth limits
   med = predict(loess(medRaw~vecYears))
@@ -1109,16 +1116,16 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
 #'
 #' @author Guillaume Evin
 plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,CIlevel=c(0.025,0.975),lim=NULL,
-                                   col=1:20,xlab="Years",ylab="Effect",addLegend=TRUE,
-                                   ...){
+                              col=1:20,xlab="Years",ylab="Effect",addLegend=TRUE,
+                              ...){
   # vector of years
   vecYears = QUALYPSOOUT$vecYearsANOVA
 
   # retrieve effects
   if(includeMean){
-    QUANTEff = QUALYPSOOUT$ANOVAQUANT$ChangeByEffect[[iEff]]
+    QUANTEff = QUALYPSOOUT$BAYES$CHANGEBYEFFECT[[iEff]]
   }else{
-    QUANTEff = QUALYPSOOUT$ANOVAQUANT$effect[[iEff]]
+    QUANTEff = QUALYPSOOUT$BAYES$MAINEFFECT[[iEff]]
   }
   nEff = dim(QUANTEff)[3]
 
@@ -1215,31 +1222,21 @@ printMessageDimension = function(Y, scenAvail, vecYears){
 #'
 #' @author Guillaume Evin
 plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
-                                                     col=c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1"),
-                                                     xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
+                                                  col=c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1"),
+                                                  xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
   # number of years
   vecYears = QUALYPSOOUT$vecYearsANOVA
   nY = length(vecYears)
-
-  # Variance decomposition
-  VV = QUALYPSOOUT$ANOVAVARIANCE
-
+  nEff = QUALYPSOOUT$listScenarioInput$nEff
 
   # number of main effects
   if(is.null(vecEff)){
-    vecEff = 1:nrow(VV$eff)
+    vecEff = 1:nEff
   }
 
-  # select effects
-  Veff = VV$eff[vecEff,]
-  nEff = nrow(Veff)
-
-  # concatenate variances
-  Vbind = rbind(Veff,VV$ResidualEffect,VV$InterVariability)
-  Vtot = colSums(Vbind)
-  Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
-
-
+  # Variance decomposition
+  VARDECOMP = QUALYPSOOUT$POINT$DECOMPVAR
+  VARDECOMP[1:nEff,] = VARDECOMP[vecEff,]
 
   # figure
   col = col[1:(nEff+2)]
@@ -1248,7 +1245,7 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
        xlab=xlab,ylab=ylab,...)
   for(i in 1:(nEff+2)){
     cumPrevious = cum.smooth
-    cum = cum + Vnorm[i,]
+    cum = cum + VARDECOMP[i,]
     cum.smooth = predict(loess(cum~vecYears))
     cum.smooth[cum.smooth<0] = 0
     polygon(c(vecYears,rev(vecYears)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
@@ -1257,13 +1254,8 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
 
   # legend
   if(addLegend){
-    if(is.null(colnames(QUALYPSOOUT$listScenarioInput$scenAvail))){
-      namesEff = paste0("Eff",vecEff)
-    }else{
-      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)[vecEff]
-    }
 
-    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
+    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(QUALYPSOOUT$namesEff[vecEff],'Res. Var.','Int. Variab.'))
   }
 }
 
@@ -1297,16 +1289,13 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,pro
   iScenario = which(QUALYPSOOUT$listScenarioInput$listEff[[iEff]] == nameScenario)
 
   # mean prediction
-  meanPred = QUALYPSOOUT$ANOVAMEAN$ChangeByEffect[[iEff]][,iScenario]
-
-  # Variance decomposition
-  VV = QUALYPSOOUT$ANOVAVARIANCE
+  meanPred = QUALYPSOOUT$POINT$CHANGEBYEFFECT[[iEff]][,iScenario]
 
   # remove effect corresponding to the scenarios from the total variance
-  Veff = VV$eff[-iEff,]
+  Veff = QUALYPSOOUT$POINT$EFFECTVAR[-iEff,]
 
   # concatenate variances
-  Vbind = rbind(Veff,VV$ResidualEffect,VV$InterVariability)
+  Vbind = rbind(Veff,QUALYPSOOUT$POINT$RESIDUALVAR,QUALYPSOOUT$POINT$INTERNALVAR)
   nEff = nrow(Vbind)-2
   Vtot = colSums(Vbind)
   Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
@@ -1349,11 +1338,7 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,pro
 
   # legend
   if(addLegend){
-    if(is.null(colnames(QUALYPSOOUT$listScenarioInput$scenAvail))){
-      namesEff = paste0("Eff",1:nEff)
-    }else{
-      namesEff = colnames(QUALYPSOOUT$listScenarioInput$scenAvail)[-iEff]
-    }
+    namesEff = QUALYPSOOUT$names[-iEff]
 
     legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
   }

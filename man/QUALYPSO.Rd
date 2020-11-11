@@ -25,17 +25,13 @@ and we want to specify a control year equals to 1990, we indicate \code{indexRef
 
 \item{listOption}{(optional) list of options
 \itemize{
-  \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: varies in [0,1]
+  \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
   distributions of inferred parameters.
   \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When \code{nCluster} is greater than one, parallelization is used to
   apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
-  \item \strong{doCompress}: logical, indicates if all the samples from the posterior distributions are stored (if FALSE)
-  or if only quantiles are retrieved (if TRUE). Equals TRUE by default
-  \item \strong{computeEmpEff}: vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically (e.g. interactions) when
-  the number of available runs is not sufficient to identify / estimate these additional effects.
   \item \strong{quantileCompress}: vector of probabilities (in [0,1]) for which we compute the quantiles from the posterior distributions
    \code{quantileCompress = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default
 }}
@@ -45,13 +41,42 @@ list with the following fields:
 \itemize{
   \item \strong{CLIMATEESPONSE}: list of climate change responses and corresponding internal variability. Contains \code{phiStar} (climate change responses),
   \code{etaStar} (deviation from the climate change responses as a result of internal variability), and \code{phi} (fitted climate responses)
-  \item \strong{ANOVAPOST}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
-  \item \strong{ANOVAQUANT}: list of quantiles from the posterior distributions of inferred quantities
-  \item \strong{ANOVAMEAN}: list of mean of the posterior distributions of inferred quantities
-  Each element contains the main effects (e.g. number of GCMs, RCMs, etc.)
-  \item \strong{ANOVAVARIANCE}: matrix \code{nTypeEff} x \code{nY} of variances related to the main effects
+  \item \strong{BAYES}: list of inferred quantities: quantiles from the posterior distributions are provided
+  \itemize{
+      \item GRANDMEAN: Grand mean
+      \item MAINEFFECT: Main effects
+      \item RESIDUALVAR_MEAN: mean of the posterior distribution for the residual variability \eqn{\sigma^2}
+      \item RESIDUALVAR_QUANT: quantiles of the posterior distribution for the residual variability \eqn{\sigma^2}
+      \item INTERNALVAR: Internal variability (constant over time)
+      \item EFFECTVAR: Variability related to the main effects (i.e. variability between the different RCMs, GCMs,..)
+      \item TOTALVAR: total variability, i.e. the sum of internal variability, residual variability and
+      variability related to the main effect
+      \item DECOMPVAR: Decomposition of the total variability for each component
+      \item CONTRIB_EACH_EFFECT: Contribution of each individual effect to its component (percentage), e.g. what
+      is the contribution of GCM1 to the variability related to GCMs
+      \item CHANGEBYEFFECT: For each main effect, mean change by type of effect, i.e. mean change by scenario (RCP4.5)
+  }
+  \item \strong{POINT}: list of point estimates: mean of the posterior distributions
+  \itemize{
+      \item GRANDMEAN: Grand mean
+      \item MAINEFFECT: Main effects
+      \item RESIDUALVAR: Variance of residual errors computed from the differences between the climate change responses
+      and the additive anova formula (grand mean + main effects)
+      \item INTERNALVAR: Internal variability (constant over time)
+      \item EFFECTVAR: Variability related to the main effects (i.e. variability between the different RCMs, GCMs,..)
+      \item TOTALVAR: total variability, i.e. the sum of internal variability, residual variability and
+      variability related to the main effect
+      \item DECOMPVAR: Decomposition of the total variability for each component
+      \item CONTRIB_EACH_EFFECT: Contribution of each individual effect to its component (percentage), e.g. what
+      is the contribution of GCM1 to the variability related to GCMs
+      \item CHANGEBYEFFECT: For each main effect, mean change by type of effect, i.e. mean change by scenario (RCP4.5)
+      \item RESERR: differences between the climate change responses and the additive anova formula (grand mean + main effects)
+  }
+
   \item \strong{vecYears}: vector of years
   \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+  \item \strong{paralType}: type of parallelisation (Time or Grid)
+  \item \strong{namesEff}: names of the main effects
   \item \strong{Y}: matrix of available combinations given as inputs
   \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
   \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})

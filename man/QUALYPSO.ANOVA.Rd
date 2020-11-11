@@ -16,7 +16,6 @@ QUALYPSO.ANOVA(phiStar, scenAvail, listOption = NULL)
 \value{
 list with the following fields:
 \itemize{
-  \item \strong{POSTERIOR}: list of MCMC samples representing the posterior distributions of inferred quantities. \code{=NULL} if\code{listOption$doCompress=T}
   \item \strong{QUANT}: list of quantiles from the posterior distributions of inferred quantities
   \item \strong{MEAN}: list of mean of the posterior distributions of inferred quantities
   \item \strong{varEffect}: matrix \code{nEff} x \code{n} of variances related to the main effects

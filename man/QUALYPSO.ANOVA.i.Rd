@@ -19,7 +19,6 @@ list with the following fields:
   \item \strong{mu}: vector of length \code{nMCMC}, mean climate change response
   \item \strong{sigma2}: vector of length \code{nMCMC}, variance of the residual terms
   \item \strong{effect}: list with \code{nTypeEff} elements, where each element corresponds to a different type of effect (e.g. alpha, beta, gamma in Eq. 7)
-  \item \strong{empEff}: list with \code{nTypeEmpEff} elements, where each element corresponds to an empirical effect
   Each element is a matrix \code{nMCMC} x \code{nMaineff}, and \code{nMaineff} is the number of main effects (e.g. number of GCMs, RCMs, etc.)
 }
 }

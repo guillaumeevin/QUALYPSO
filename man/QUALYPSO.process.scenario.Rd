@@ -4,16 +4,14 @@
 \alias{QUALYPSO.process.scenario}
 \title{QUALYPSO.process.scenario}
 \usage{
-QUALYPSO.process.scenario(scenAvail, computeEmpEff)
+QUALYPSO.process.scenario(scenAvail)
 }
 \arguments{
 \item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}}
-
-\item{computeEmpEff}{vector of column indices in \code{scenAvail} corresponding to effects which are estimated empirically}
 }
 \value{
 list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
-indexEffInCompScen, Qmat, EmpEff})
+indexEffInCompScen, Qmat})
 }
 \description{
 Process input scenarios.
