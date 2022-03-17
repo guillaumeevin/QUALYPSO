@@ -1,17 +1,17 @@
 Package: QUALYPSO
 Type: Package
-Date: 2019-06-19
+Date: 2022-03-17
 License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
-Version: 1.2
-Authors@R: c(person("Guillaume","Evin",role = c("aut", "cre"),email="guillaume.evin@irstea.fr"))
+Version: 2.0
+Authors@R: c(person("Guillaume","Evin",role = c("aut", "cre"),email="guillaume.evin@inrae.fr"))
 Author: Guillaume Evin [aut, cre]
-Maintainer: Guillaume Evin <guillaume.evin@irstea.fr>
+Maintainer: Guillaume Evin <guillaume.evin@inrae.fr>
 Imports: MASS, expm, Rfast, foreach, doParallel, methods, stats, graphics, grDevices
 Description: These functions use data augmentation and Bayesian techniques for the assessment of single-member and incomplete ensembles of climate projections. It provides unbiased estimates of climate change responses of all simulation chains and of all uncertainty variables. It additionally propagates uncertainty due to missing information in the estimates.
   - Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie. (2019) <doi:10.1175/JCLI-D-18-0606.1>.
 Depends: R (>= 2.10)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2
 NeedsCompilation: no

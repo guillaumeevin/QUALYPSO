@@ -4,16 +4,20 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, parSmooth, indexReferenceYear, typeChangeVariable)
+fit.climate.response(Y, parSmooth, Xmat, Xref, Xfut, typeChangeVariable)
 }
 \arguments{
 \item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
 
 \item{parSmooth}{smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]}
 
-\item{indexReferenceYear}{index of the reference year}
+\item{Xmat}{matrix of predictors corresponding to the projections, e.g. time or global temperature.}
 
-\item{typeChangeVariable}{type of change variable: "abs" or "rel"}
+\item{Xref}{reference/control value of the predictor (e.g. the reference period).}
+
+\item{Xfut}{values of the predictor over which the ANOVA will be applied.}
+
+\item{typeChangeVariable}{type of change variable: "abs" (absolute, value by default) or "rel" (relative)}
 }
 \value{
 list with the following fields for each simulation chain:

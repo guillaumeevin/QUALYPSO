@@ -4,9 +4,18 @@
 \alias{plotQUALYPSOeffect}
 \title{plotQUALYPSOeffect}
 \usage{
-plotQUALYPSOeffect(QUALYPSOOUT, iEff, includeMean = FALSE,
-  CIlevel = c(0.025, 0.975), lim = NULL, col = 1:20,
-  xlab = "Years", ylab = "Effect", addLegend = TRUE, ...)
+plotQUALYPSOeffect(
+  QUALYPSOOUT,
+  iEff,
+  includeMean = FALSE,
+  CIlevel = c(0.025, 0.975),
+  lim = NULL,
+  col = 1:20,
+  xlab = "",
+  ylab = "Effect",
+  addLegend = TRUE,
+  ...
+)
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}

@@ -91,8 +91,10 @@ get.Qmat = function(p){
 #'
 #' @param Y matrix of simulation chains: \code{nS} x \code{nY}
 #' @param parSmooth smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
-#' @param indexReferenceYear index of the reference year
-#' @param typeChangeVariable type of change variable: "abs" or "rel"
+#' @param Xmat matrix of predictors corresponding to the projections, e.g. time or global temperature.
+#' @param Xref reference/control value of the predictor (e.g. the reference period).
+#' @param Xfut values of the predictor over which the ANOVA will be applied.
+#' @param typeChangeVariable type of change variable: "abs" (absolute, value by default) or "rel" (relative)
 #'
 #' @return list with the following fields for each simulation chain:
 #' \itemize{
@@ -113,7 +115,7 @@ get.Qmat = function(p){
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 #' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
-fit.climate.response = function(Y, parSmooth, indexReferenceYear, typeChangeVariable){
+fit.climate.response = function(Y, parSmooth, Xmat, Xref, Xfut, typeChangeVariable){
 
   # number of simulation chains
   nS = nrow(Y)
@@ -121,37 +123,47 @@ fit.climate.response = function(Y, parSmooth, indexReferenceYear, typeChangeVari
   # length of the simulation chains
   nY = ncol(Y)
 
+  # number of future time/global.tas
+  nFut = length(Xfut)
+
   # prepare outputs
-  phiStar = etaStar = phi = matrix(nrow=nS,ncol=nY)
+  phiStar = phi = matrix(nrow=nS,ncol=nFut)
+  etaStar = matrix(nrow=nS,ncol=nY)
   climateResponse = list()
 
   for(iS in 1:nS){
     # projection for this simulation chain
     Ys = Y[iS,]
+    Xs = Xmat[iS,]
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
-    smooth.spline.out<-stats::smooth.spline((1:nY)[zz],Ys[zz],spar=parSmooth)
+    smooth.spline.out<-stats::smooth.spline(Xs[zz],Ys[zz],spar=parSmooth)
 
-    # fitted responses at unnown points
+    # store spline object
     climateResponse[[iS]] = smooth.spline.out
-    phiS = predict(smooth.spline.out, 1:nY)$y
+
+    # fitted responses at the points of the fit (for etaStar)
+    phiY = predict(smooth.spline.out, Xs)$y
+
+    # fitted responses at unknown points ("Xfut")
+    phiS = predict(smooth.spline.out, Xfut)$y
+
+    # climate response of the reference/control time/global tas
+    phiC = predict(smooth.spline.out, Xref)$y
 
     # store climate response for this simulation chain
     phi[iS,] = phiS
-
-    # climate response of the reference year
-    phiC = phiS[indexReferenceYear]
 
     # Climate change response: phiStar, and internal variability expressed as a change: etaStar
     if(typeChangeVariable=='abs'){
       # Eq. 5
       phiStar[iS,] = phiS-phiC
-      etaStar[iS,] = Ys-phiS
+      etaStar[iS,] = Ys-phiY
     }else if(typeChangeVariable=='rel'){
       # Eq. 6
       phiStar[iS,] = phiS/phiC-1
-      etaStar[iS,] = (Ys-phiS)/phiC
+      etaStar[iS,] = (Ys-phiY)/phiC
     }else{
       stop("fit.climate.response: argument type.change.var must be equal to 'abs' (absolute changes) or 'rel' (relative changes)")
     }
@@ -501,18 +513,27 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   nEff = listScenarioInput$nEff
   nTypeEff = listScenarioInput$nTypeEff
 
-  #########  Apply ANOVA for each time step: parallelisation over time steps #########
-  cl <- parallel::makeCluster(listOption$nCluster)
-  doParallel::registerDoParallel(cl)
-  i = NULL # avoid warning during check
-  Anova.POST <- foreach(i=1:n, .multicombine=TRUE,
-                        .export=c("QUALYPSO.ANOVA.i")) %dopar% {
-                          POST.out = QUALYPSO.ANOVA.i(phiStar.i=phiStar[,i], nMCMC=listOption$nMCMC,listScenarioInput = listScenarioInput)
-                          return(POST.out)
-                        }
-  parallel::stopCluster(cl)
+  #########  Apply ANOVA for each time step: parallel computation over time steps #########
+  # apply parallel computation only if more than one cluster has been indicated
+  if(listOption$nCluster==1){
+    Anova.POST = list()
+    for(i in 1:n){
+      Anova.POST[[i]] = QUALYPSO.ANOVA.i(phiStar.i=phiStar[,i], nMCMC=listOption$nMCMC,listScenarioInput = listScenarioInput)
+    }
+  }else{
+    cl <- parallel::makeCluster(listOption$nCluster)
+    doParallel::registerDoParallel(cl)
+    i = NULL # avoid warning during check
+    Anova.POST <- foreach(i=1:n, .multicombine=TRUE,
+                          .export=c("QUALYPSO.ANOVA.i")) %dopar% {
+                            POST.out = QUALYPSO.ANOVA.i(phiStar.i=phiStar[,i], nMCMC=listOption$nMCMC,listScenarioInput = listScenarioInput)
+                            return(POST.out)
+                          }
+    parallel::stopCluster(cl)
+  }
 
-  # number of years for which QE-ANOVA is applied
+
+  # number of predictor values for which QE-ANOVA is applied
   y.POST = length(Anova.POST)
 
   #============================
@@ -637,13 +658,20 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' @param Y matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections
 #' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
 #' number of main effects which will be included in the ANOVA model.
-#' @param vecYears (optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
-#' mainly used for records. By default, a vector \code{1:nY} is created.
-#' @param indexReferenceYear (optional) index in \code{vecYears} corresponding to the control year. For example, if \code{vecYears=1980:2100}
-#' and we want to specify a control year equals to 1990, we indicate \code{indexReferenceYear=11} or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
-#' \strong{if} \code{vecYears} is already available in the workspace
-#' @param indexFutureYear index in \code{indexFutureYear} corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
-#' \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.
+#' @param X (optional) predictors corresponding to the projections, e.g. time or global temperature.
+#' It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100} or
+#' a matrix of the same size as Y is these predictors are different for the scenarios. By default,
+#' a vector \code{1:nY} is created.
+#' @param Xref (optional) reference/control value of the predictor (e.g. the reference period).
+#' X must be included in the range of values of X. For example, if \code{X=1980:2100}, Xref can be any value
+#' between 1980 and 2100. By default, Xref is taken as the minimum value of X.
+#' @param Xfut (optional) values of the predictor over which the ANOVA will be applied. It must be
+#' a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
+#' \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
+#' maximum values of X if X is a matrix.
+#' @param iFut index in \code{1:length(Xfut)} corresponding to a future predictor value . This index is
+#' necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
+#' Indeed, in this case, we run QUALYPSO only for one future predictor.
 #' @param listOption (optional) list of options
 #' \itemize{
 #'   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
@@ -693,8 +721,9 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #'       \item RESERR: differences between the climate change responses and the additive anova formula (grand mean + main effects)
 #'   }
 #'
-#'   \item \strong{vecYears}: vector of years
-#'   \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+#'   \item \strong{Xmat}: matrix of predictors
+#'   \item \strong{Xref}: reference predictor value
+#'   \item \strong{Xfut}: future predictor values
 #'   \item \strong{paralType}: type of parallelisation (Time or Grid)
 #'   \item \strong{namesEff}: names of the main effects
 #'   \item \strong{Y}: matrix of available combinations given as inputs
@@ -722,13 +751,13 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' scenGCM1RCM1 = effGCM1 + effRCM1 + rnorm(n=n,sd=0.5)
 #' scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n,sd=0.5)
 #' scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n,sd=0.5)
-#' Y = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
+#' Y.synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
 #'
 #' # Here, scenAvail indicates that the first scenario is obtained with the combination of the
 #' # GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
 #' # the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
 #' # of the GCM "GCM2" and RCM "RCM1".
-#' scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
+#' scenAvail.synth = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 #'
 #' ##########################################################################
 #' # RUN QUALYPSO
@@ -737,7 +766,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' # - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
 #' # run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
 #' # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
-#' # indexFutureYear.
+#' # iFut
 #' # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
 #' # characteristics nEff corresponds to the number of main effects which will be included in the
 #' # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
@@ -750,26 +779,77 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' listOption = list(nBurn=100,nKeep=100,quantileCompress=c(0.025,0.5,0.975))
 #'
 #' # run QUALYPSO
-#' QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2020, listOption=listOption)
+#' QUALYPSO.synth = QUALYPSO(Y=Y.synth, scenAvail=scenAvail.synth, X=2001:2020, listOption=listOption)
 #'
 #' ##########################################################################
 #' # SOME PLOTS
 #' ##########################################################################
 #' # plot grand mean
-#' plotQUALYPSOgrandmean(QUALYPSOOUT)
+#' plotQUALYPSOgrandmean(QUALYPSO.synth,xlab="Years")
 #'
 #' # plot main GCM effects
-#' plotQUALYPSOeffect(QUALYPSOOUT,iEff=1)
+#' plotQUALYPSOeffect(QUALYPSO.synth,iEff=1,xlab="Years")
 #'
 #' # plot main RCM effects
-#' plotQUALYPSOeffect(QUALYPSOOUT,iEff=2)
+#' plotQUALYPSOeffect(QUALYPSO.synth,iEff=2,xlab="Years")
 #'
 #' # plot fraction of total variance for the differences sources of uncertainty
-#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.synth,xlab="Years")
 #'
 #' # plot mean prediction and total variance with the differences sources of uncertainty
-#' # for one scenario (e.g. a RCP scenario)
-#' plotQUALYPSOTotalVarianceByScenario(QUALYPSOOUT,iEff=1,nameScenario='GCM1')
+#' plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.synth,xlab="Years")
+#'
+#' #____________________________________________________________
+#' # EXAMPLE OF QUALYPSO WHEN THE PREDICTOR IS TIME
+#' #____________________________________________________________
+#'
+#' # list of options
+#' listOption = list(typeChangeVariable='abs')
+#'
+#' # call QUALYPSO
+#' QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,Xref=1999,
+#'                          Xfut=Xfut_time,listOption=listOption)
+#'
+#' # grand mean effect
+#' plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
+#'
+#' # main GCM effects
+#' plotQUALYPSOeffect(QUALYPSO.time,iEff = 1,xlab="Years")
+#'
+#' # main RCM effects
+#' plotQUALYPSOeffect(QUALYPSO.time,iEff = 2,xlab="Years")
+#'
+#' # mean change and associated uncertainties
+#' plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.time,xlab="Years")
+#'
+#' # variance decomposition
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
+#'
+#' #____________________________________________________________
+#' # EXAMPLE OF QUALYPSO WHEN THE PREDICTOR IS THE GLOBAL TEMPERATURE
+#' #____________________________________________________________
+#'
+#' # list of options
+#' listOption = list(typeChangeVariable='abs')
+#'
+#' # call QUALYPSO
+#' QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,Xref=13,
+#'                               Xfut=Xfut_globaltas,listOption=listOption)
+#'
+#' # grand mean effect
+#' plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+#'
+#' # main GCM effects
+#' plotQUALYPSOeffect(QUALYPSO.globaltas,iEff = 1,xlab="Global temperature (Celsius)")
+#'
+#' # main RCM effects
+#' plotQUALYPSOeffect(QUALYPSO.globaltas,iEff = 2,xlab="Global temperature (Celsius)")
+#'
+#' # mean change and associated uncertainties
+#' plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+#'
+#' # variance decomposition
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
@@ -778,7 +858,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' @export
 #'
 #' @author Guillaume Evin
-QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutureYear=NULL,listOption=NULL){
+QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
   ######### Check inputs and assign default values ##########
 
   ######## Check list of options ########
@@ -795,7 +875,6 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 
     # parallelization over space (e.g. on a grid)
     paralType = 'Grid'
-    if(is.null(indexFutureYear)) stop("Since Y is an array of dimension 3: 'indexFutureYear' must be provided'")
   }else{
     # Y is a matrix: Scenario x Time
     nS = nrow(Y)
@@ -805,29 +884,77 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     paralType = 'Time'
   }
 
-  # vecYears
-  if(!is.null(vecYears)){
-    if(nY!=length(vecYears)) stop('length of vecYears different from the number of columns of Y')
-    if(!all(is.numeric(vecYears))) stop('vecYears must be a vector of years')
-  }else{
-    vecYears = 1:nY
-  }
-
-  # indexReferenceYear
-  if(!is.null(indexReferenceYear)){
-    if(!any(indexReferenceYear==1:nY)){
-      printMessageDimension(Y,scenAvail,vecYears)
-      stop('wrong value for indexReferenceYear')
+  # X is the explanatory (or dependent) variable against the evolution of trajectory
+  # are assessed. It is usually the years corresponding to the climate simulations
+  # but can also be the global temperature.
+  # X can be:
+  # - NULL: in that case, we create a simple index corresponding to the size of Y
+  # - a vector: the same depending var. is used for all the climate simulations,
+  # its length must correspond to the number of columns of Y.
+  # - a matrix: same size as Y, each line indicates the depending var. for this simulation.
+  if(is.null(X)){
+    Xmat = matrix(rep(1:nY,nS),byrow=T,nrow=nS,ncol=nY)
+  }else if(is.vector(X)){
+    if(nY!=length(X)){
+      stop('if X is provided as a vector, its length must equal the number of columns of Y')
+    }else{
+      # repeat the vector to obtain a matrix
+      Xmat = matrix(rep(X,nS),byrow=T,nrow=nS,ncol=nY)
+    }
+  }else if(is.matrix(X)){
+    if(any(dim(X)!=dim(Y))){
+      stop('if X is provided as a matrix, its size must match the size of Y')
+    }else{
+      Xmat = X
     }
   }else{
-    indexReferenceYear = 1
+    stop('X must be NULL, a vector or a matrix')
   }
 
-  # indexFutureYear
+  # Xref is the reference value for X used to compute absolute or relative changes
+  # usually indicating the reference (control) period of the current climate
+  if(is.null(Xref)){
+    Xref=min(Xmat)
+  }else{
+    # if Xref is provided, we check that is a single value within the values of X
+    if(length(Xref)!=1|!is.numeric(Xref)){
+      stop('Xref must be a single numeric value')
+    }else if(Xref<min(Xmat)|Xref>max(Xmat)){
+      stop('Xref must be within the range of X')
+    }
+  }
+
+
+  # Xfut are the values for X used to compute absolute or relative changes
+  # usually indicating the future periods. When a grid is provided for Y, it must
+  # be a single value. Indeed, in this case, we run QUALYPSO only for one future
+  # year/global temperature. Otherwise, it can be a vector.
+  # if Xfut is provided, we check that is a single value within the values of X
+  if(is.null(Xfut)){
+    if(is.null(X)){
+      Xfut = 1:nY
+    }else if(is.vector(X)){
+      Xfut = X
+    }else if(is.matrix(X)){
+      Xfut = seq(from=min(X),to=max(X),length.out=10)
+    }
+  }else if(!is.vector(Xfut)|!is.numeric(Xfut)){
+    stop('Xfut must be a vector')
+  }else if(length(Xfut)==1){
+    stop('Xfut must be a vector with a length greater than 1')
+  }else if(min(Xfut)<min(Xmat)|max(Xfut)>max(Xmat)){
+    stop('Xfut must be within the range of X')
+  }
+
   if(paralType == 'Grid'){
-    if(!any(indexFutureYear==1:nY)){
-      printMessageDimension(Y,scenAvail,vecYears)
-      stop('wrong value for indexFutureYear')
+    # if Y is an array, iFut must be provided (we provide the ANOVA decomposition
+    # only for one future time/global tas)
+    if(is.null(iFut)){
+      stop('if Y is an array, iFut must be provided')
+    }else if(length(iFut)!=1|!is.numeric(iFut)){
+      stop('iFut must be a single numeric value')
+    }else if(!any(iFut==1:length(Xfut))){
+      stop(paste0('iFut must be an index of the vector Xfut, i.e. an integer between 1 and ',length(Xfut)))
     }
   }
 
@@ -849,25 +976,21 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
   ##############################################
   # extract climate response
   if(paralType == 'Time'){
-    climResponse = fit.climate.response(Y, parSmooth=listOption$parSmooth,indexReferenceYear=indexReferenceYear,
+    climResponse = fit.climate.response(Y, parSmooth=listOption$parSmooth,
+                                        Xmat=Xmat, Xref=Xref, Xfut=Xfut,
                                         typeChangeVariable=listOption$typeChangeVariable)
 
     # extract quantities from these fits
-    phiStarAllTime = climResponse$phiStar
-    etaStarAllTime = climResponse$etaStar
-    phiAllTime = climResponse$phi
-
-    # subset of years, starting from the reference year
-    filterYearsAnova = 1:nY>indexReferenceYear
-
-    # vector of years for ANOVA
-    vecYearsANOVA = vecYears[filterYearsAnova]
-
-    # phiStar for ANOVA
-    phiStar = phiStarAllTime[,filterYearsAnova]
+    phiStar = climResponse$phiStar
+    etaStar = climResponse$etaStar
+    phi = climResponse$phi
 
     # internal variability
-    varInterVariability = rep(climResponse$varInterVariability,length(vecYearsANOVA))
+    varInterVariability = rep(climResponse$varInterVariability,length(Xfut))
+
+    # phiStar for the ANOVA
+    phiStar.ANOVA = phiStar
+
   }else if(paralType == 'Grid'){
     climResponse = list()
     phiStarAllTime = etaStarAllTime = phiAllTime = array(dim=d)
@@ -883,29 +1006,27 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
         phiAllTime[g,,] = NA
         varInterVariability[g] = NA
       }else{
-        climResponse[[g]] = fit.climate.response(Y[g,,], parSmooth=listOption$parSmooth,indexReferenceYear=indexReferenceYear,
+        climResponse[[g]] = fit.climate.response(Y[g,,], parSmooth=listOption$parSmooth,
+                                                 Xmat=Xmat, Xref=Xref, Xfut=Xfut,
                                                  typeChangeVariable=listOption$typeChangeVariable)
 
         # extract quantities from these fits
-        phiStarAllTime[g,,] = climResponse[[g]]$phiStar
-        etaStarAllTime[g,,] = climResponse[[g]]$etaStar
-        phiAllTime[g,,] = climResponse[[g]]$phi
+        phiStar[g,,] = climResponse[[g]]$phiStar
+        etaStar[g,,] = climResponse[[g]]$etaStar
+        phi[g,,] = climResponse[[g]]$phi
         varInterVariability[g] = climResponse[[g]]$varInterVariability
       }
 
     }
 
     # phiStar for ANOVA
-    phiStar = t(phiStarAllTime[,,indexFutureYear])
-
-    # vector of years for ANOVA
-    vecYearsANOVA = vecYears[indexFutureYear]
+    phiStar.ANOVA = t(phiStar[,,iFut])
   }
 
 
   #====================================================================================================
   # ANOVA on phiStar
-  anova = QUALYPSO.ANOVA(phiStar = phiStar, scenAvail = scenAvail, listOption = listOption)
+  anova = QUALYPSO.ANOVA(phiStar = phiStar.ANOVA, scenAvail = scenAvail, listOption = listOption)
 
 
   # names of the main effect
@@ -933,7 +1054,7 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
     for(iE in 1:nEff){
       mat.eff[iE,] = effhat[[iE]][,which(scenAvail[iS,iE]==listEff[[iE]])]
     }
-    resErr[iS,] = phiStar[iS,1:nP] - muHat - Rfast::colsums(mat.eff)
+    resErr[iS,] = phiStar.ANOVA[iS,1:nP] - muHat - Rfast::colsums(mat.eff)
   }
 
   # compute point estimates of the variances
@@ -1027,9 +1148,10 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 
   #############################################
   # return results
-  return(list(CLIMATEESPONSE=list(phiStar=phiStarAllTime,etaStar=etaStarAllTime,phi=phiAllTime),
+  return(list(CLIMATEESPONSE=list(phiStar=phiStar,etaStar=etaStar,phi=phi),
               BAYES=BAYES,POINT=POINT,
-              vecYears=listOption$vecYears,vecYearsANOVA=vecYearsANOVA,paralType=paralType,namesEff=namesEff,
+              Xmat=Xmat,Xref=Xref,Xfut=Xfut,
+              paralType=paralType,namesEff=namesEff,
               Y=Y,listOption=anova$listOption,listScenarioInput=anova$listScenarioInput))
 }
 
@@ -1053,10 +1175,10 @@ QUALYPSO = function(Y,scenAvail,vecYears=NULL,indexReferenceYear=NULL,indexFutur
 #'
 #' @author Guillaume Evin
 plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
-                                 col='black',xlab="Years",ylab="Grand mean",addLegend=T,
+                                 col='black',xlab="",ylab="Grand mean",addLegend=T,
                                  ...){
-  # vector of years
-  vecYears = QUALYPSOOUT$vecYearsANOVA
+  # vector of predictors
+  Xfut = QUALYPSOOUT$Xfut
 
   # find index quantiles
   iMedian = which(QUALYPSOOUT$listOption$quantileCompress==0.5)
@@ -1070,22 +1192,22 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
   bsupRaw = QUALYPSOOUT$BAYES$GRANDMEAN[,iBsup]
 
   # get smooth limits
-  med = predict(loess(medRaw~vecYears))
-  binf = predict(loess(binfRaw~vecYears))
-  bsup = predict(loess(bsupRaw~vecYears))
+  med = predict(loess(medRaw~Xfut))
+  binf = predict(loess(binfRaw~Xfut))
+  bsup = predict(loess(bsupRaw~Xfut))
 
   # colors polygon
   colPoly = adjustcolor(col,alpha.f=0.2)
 
   # initiate plot
   if(is.null(lim)) lim = range(c(binf,bsup),na.rm=TRUE)
-  plot(-100,-100,xlim=range(vecYears),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+  plot(-100,-100,xlim=range(Xfut),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
 
   # add confidence interval
-  polygon(c(vecYears,rev(vecYears)),c(binf,rev(bsup)),col=colPoly,lty=0)
+  polygon(c(Xfut,rev(Xfut)),c(binf,rev(bsup)),col=colPoly,lty=0)
 
   # add median
-  lines(vecYears,med,lwd=3,col=col)
+  lines(Xfut,med,lwd=3,col=col)
 
   # legend
   if(addLegend){
@@ -1116,10 +1238,10 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,CIlevel=c(0.025,0.975),lim=NULL,
 #'
 #' @author Guillaume Evin
 plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,CIlevel=c(0.025,0.975),lim=NULL,
-                              col=1:20,xlab="Years",ylab="Effect",addLegend=TRUE,
+                              col=1:20,xlab="",ylab="Effect",addLegend=TRUE,
                               ...){
-  # vector of years
-  vecYears = QUALYPSOOUT$vecYearsANOVA
+  # vector of predictors
+  Xfut = QUALYPSOOUT$Xfut
 
   # retrieve effects
   if(includeMean){
@@ -1141,23 +1263,23 @@ plotQUALYPSOeffect = function(QUALYPSOOUT,iEff,includeMean=FALSE,CIlevel=c(0.025
   bsupRaw = QUANTEff[,iBsup,]
 
   # get smooth limits
-  med = apply(medRaw,2,function(x) predict(loess(x~vecYears)))
-  binf = apply(binfRaw,2,function(x) predict(loess(x~vecYears)))
-  bsup = apply(bsupRaw,2,function(x) predict(loess(x~vecYears)))
+  med = apply(medRaw,2,function(x) predict(loess(x~Xfut)))
+  binf = apply(binfRaw,2,function(x) predict(loess(x~Xfut)))
+  bsup = apply(bsupRaw,2,function(x) predict(loess(x~Xfut)))
 
   # initiate plot
   if(is.null(lim)) lim = range(c(binf,bsup),na.rm=TRUE)
-  plot(-100,-100,xlim=range(vecYears),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+  plot(-100,-100,xlim=range(Xfut),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
 
   for(i in 1:nEff){
     # colors polygon
     colPoly = adjustcolor(col[i],alpha.f=0.2)
 
     # add confidence interval
-    polygon(c(vecYears,rev(vecYears)),c(binf[,i],rev(bsup[,i])),col=colPoly,lty=0)
+    polygon(c(Xfut,rev(Xfut)),c(binf[,i],rev(bsup[,i])),col=colPoly,lty=0)
 
     # add median
-    lines(vecYears,med[,i],lwd=3,col=col[i])
+    lines(Xfut,med[,i],lwd=3,col=col[i])
   }
 
   # legend
@@ -1182,7 +1304,7 @@ plotQUALYPSOgetCI = function(QUALYPSOOUT,iBinf,iBsup){
 
 #==============================================================================
 # printMessageDimension
-printMessageDimension = function(Y, scenAvail, vecYears){
+printMessageDimension = function(Y, scenAvail, X){
   # Y
   dimY = dim(Y)
   if(length(dimY)==2){
@@ -1199,9 +1321,9 @@ printMessageDimension = function(Y, scenAvail, vecYears){
                  ' projections x nEff=',dimscenAvail[2],' effects'))
   }else(stop('scenAvail must be a matrix nS x nEff'))
 
-  # vecYears
-  print("VecYears must be a vector of years or indices corresponding to the dimension 'time':")
-  print(vecYears)
+  # X
+  print("X must be a vector/matrix of years or global temperatures corresponding to the dimension of Y:")
+  print(X)
 }
 
 
@@ -1223,10 +1345,10 @@ printMessageDimension = function(Y, scenAvail, vecYears){
 #' @author Guillaume Evin
 plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
                                                   col=c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1"),
-                                                  xlab="Years",ylab="% Total Variance",addLegend=TRUE,...){
-  # number of years
-  vecYears = QUALYPSOOUT$vecYearsANOVA
-  nY = length(vecYears)
+                                                  xlab="",ylab="% Total Variance",addLegend=TRUE,...){
+  # future predictor values
+  Xfut = QUALYPSOOUT$Xfut
+  nFut = length(Xfut)
   nEff = QUALYPSOOUT$listScenarioInput$nEff
 
   # number of main effects
@@ -1240,22 +1362,21 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
 
   # figure
   col = col[1:(nEff+2)]
-  cum=cum.smooth=rep(0,nY)
-  plot(-1,-1,xlim=range(vecYears),ylim=c(0,1),xaxs="i",yaxs="i",las=1,
-       xlab=xlab,ylab=ylab,...)
+  cum=cum.smooth=rep(0,nFut)
+  plot(-1,-1,xlim=range(Xfut),ylim=c(0,1),xaxs="i",yaxs="i",las=1,xlab=xlab,ylab=ylab,...)
   for(i in 1:(nEff+2)){
     cumPrevious = cum.smooth
     cum = cum + VARDECOMP[i,]
-    cum.smooth = predict(loess(cum~vecYears))
+    cum.smooth = predict(loess(cum~Xfut))
     cum.smooth[cum.smooth<0] = 0
-    polygon(c(vecYears,rev(vecYears)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
+    polygon(c(Xfut,rev(Xfut)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
   }
   abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
 
   # legend
   if(addLegend){
-
-    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(QUALYPSOOUT$namesEff[vecEff],'Res. Var.','Int. Variab.'))
+    legend('topleft',bty='n',cex=1.1, fill=rev(col),
+           legend=c(QUALYPSOOUT$namesEff[vecEff],'Res. Var.','Int. Variab.'))
   }
 }
 
@@ -1280,10 +1401,10 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
 #'
 #' @author Guillaume Evin
 plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,probCI=0.9,col=NULL,ylim=NULL,
-                                               xlab="Years",ylab="Change variable",addLegend=TRUE,...){
-  # number of years
-  vecYears = QUALYPSOOUT$vecYearsANOVA
-  nY = length(vecYears)
+                                               xlab="",ylab="Change variable",addLegend=TRUE,...){
+  # future predictor values
+  Xfut = QUALYPSOOUT$Xfut
+  nFut = length(Xfut)
 
   # which scenario
   iScenario = which(QUALYPSOOUT$listScenarioInput$listEff[[iEff]] == nameScenario)
@@ -1315,23 +1436,23 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,pro
   }
 
   # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
-  limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nY)
-  limIntInf[1,] = predict(loess(binf~vecYears))
-  limIntSup[1,] = predict(loess(bsup~vecYears))
+  limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nFut)
+  limIntInf[1,] = predict(loess(binf~Xfut))
+  limIntSup[1,] = predict(loess(bsup~Xfut))
   for(i in 1:(nEff+1)){
     binfi = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
-    limIntInf[i+1,] = predict(loess(binfi~vecYears))
+    limIntInf[i+1,] = predict(loess(binfi~Xfut))
     bsupi = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
-    limIntSup[i+1,] = predict(loess(bsupi~vecYears))
+    limIntSup[i+1,] = predict(loess(bsupi~Xfut))
   }
 
   # figure
   if(is.null(ylim)) ylim = c(min(binf),max(bsup))
-  plot(-1,-1,xlim=range(vecYears),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
+  plot(-1,-1,xlim=range(Xfut),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
   for(i in 1:(nEff+2)){
-    polygon(c(vecYears,rev(vecYears)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
+    polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
   }
-  lines(vecYears,predict(loess(meanPred~vecYears)),col="white",lwd=1)
+  lines(Xfut,predict(loess(meanPred~Xfut)),col="white",lwd=1)
 
   # add horizontal lines
   abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
@@ -1340,6 +1461,85 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,iEff,nameScenario,pro
   if(addLegend){
     namesEff = QUALYPSOOUT$names[-iEff]
 
+    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
+  }
+}
+
+
+#==============================================================================
+#' plotQUALYPSOMeanChangeAndUncertainties
+#'
+#' Plot fraction of total variance explained by each source of uncertainty.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param probCI probability for the dredible interval, =0.9 by default
+#' @param col colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively
+#' @param ylim y-axis limits
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOMeanChangeAndUncertainties = function(QUALYPSOOUT,probCI=0.9,col=NULL,ylim=NULL,
+                                                  xlab="",ylab="Change variable",addLegend=TRUE,...){
+  # future predictor values
+  Xfut = QUALYPSOOUT$Xfut
+  nFut = length(Xfut)
+
+  # mean prediction
+  meanPred = QUALYPSOOUT$POINT$GRANDMEAN
+
+  # total variance
+  Veff = QUALYPSOOUT$POINT$EFFECTVAR
+
+  # concatenate variances
+  Vbind = rbind(Veff,QUALYPSOOUT$POINT$RESIDUALVAR,QUALYPSOOUT$POINT$INTERNALVAR)
+  nEff = nrow(Vbind)-2
+  Vtot = colSums(Vbind)
+  Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
+
+  # reverse
+  vNormRev = apply(Vnorm,2,rev)
+
+
+  # compute the lower bound if the distribution is gaussian
+  binf = qnorm(p = (1-probCI)/2, mean = meanPred, sd = sqrt(Vtot))
+  bsup = qnorm(p = 0.5+probCI/2, mean = meanPred, sd = sqrt(Vtot))
+
+  # figure
+  if(is.null(col)){
+    default.col = c("orange","yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1")
+    col = default.col[1:(nEff+2)]
+  }
+
+  # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
+  limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nFut)
+  limIntInf[1,] = predict(loess(binf~Xfut))
+  limIntSup[1,] = predict(loess(bsup~Xfut))
+  for(i in 1:(nEff+1)){
+    binfi = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
+    limIntInf[i+1,] = predict(loess(binfi~Xfut))
+    bsupi = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
+    limIntSup[i+1,] = predict(loess(bsupi~Xfut))
+  }
+
+  # figure
+  if(is.null(ylim)) ylim = c(min(binf),max(bsup))
+  plot(-1,-1,xlim=range(Xfut),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
+  for(i in 1:(nEff+2)){
+    polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
+  }
+  lines(Xfut,predict(loess(meanPred~Xfut)),col="white",lwd=1)
+
+  # add horizontal lines
+  abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
+
+  # legend
+  if(addLegend){
+    namesEff = QUALYPSOOUT$names
     legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
   }
 }

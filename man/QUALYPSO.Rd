@@ -4,8 +4,15 @@
 \alias{QUALYPSO}
 \title{QUALYPSO}
 \usage{
-QUALYPSO(Y, scenAvail, vecYears = NULL, indexReferenceYear = NULL,
-  indexFutureYear = NULL, listOption = NULL)
+QUALYPSO(
+  Y,
+  scenAvail,
+  X = NULL,
+  Xref = NULL,
+  Xfut = NULL,
+  iFut = NULL,
+  listOption = NULL
+)
 }
 \arguments{
 \item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections}
@@ -13,15 +20,23 @@ QUALYPSO(Y, scenAvail, vecYears = NULL, indexReferenceYear = NULL,
 \item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
 number of main effects which will be included in the ANOVA model.}
 
-\item{vecYears}{(optional) vector of years corresponding to the projections (e.g. \code{vecYears=2001:2100}. Optional,
-mainly used for records. By default, a vector \code{1:nY} is created.}
+\item{X}{(optional) predictors corresponding to the projections, e.g. time or global temperature.
+It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100} or
+a matrix of the same size as Y is these predictors are different for the scenarios. By default,
+a vector \code{1:nY} is created.}
 
-\item{indexReferenceYear}{(optional) index in \code{vecYears} corresponding to the control year. For example, if \code{vecYears=1980:2100}
-and we want to specify a control year equals to 1990, we indicate \code{indexReferenceYear=11} or, equivalently \code{indexReferenceYear=which(vecYears==1990)}
-\strong{if} \code{vecYears} is already available in the workspace}
+\item{Xref}{(optional) reference/control value of the predictor (e.g. the reference period).
+X must be included in the range of values of X. For example, if \code{X=1980:2100}, Xref can be any value
+between 1980 and 2100. By default, Xref is taken as the minimum value of X.}
 
-\item{indexFutureYear}{index in \code{indexFutureYear} corresponding to a future year (similarly to \code{indexReferenceYear}). This index is necessary when
-\code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points. Indeed, in this case, we run QUALYPSO only for one future year.}
+\item{Xfut}{(optional) values of the predictor over which the ANOVA will be applied. It must be
+a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
+\code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
+maximum values of X if X is a matrix.}
+
+\item{iFut}{index in \code{1:length(Xfut)} corresponding to a future predictor value . This index is
+necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
+Indeed, in this case, we run QUALYPSO only for one future predictor.}
 
 \item{listOption}{(optional) list of options
 \itemize{
@@ -73,8 +88,9 @@ list with the following fields:
       \item RESERR: differences between the climate change responses and the additive anova formula (grand mean + main effects)
   }
 
-  \item \strong{vecYears}: vector of years
-  \item \strong{vecYearsANOVA}: vector of years for the ANOVA decomposition (start at \code{indexReferenceYear})
+  \item \strong{Xmat}: matrix of predictors
+  \item \strong{Xref}: reference predictor value
+  \item \strong{Xfut}: future predictor values
   \item \strong{paralType}: type of parallelisation (Time or Grid)
   \item \strong{namesEff}: names of the main effects
   \item \strong{Y}: matrix of available combinations given as inputs
@@ -105,13 +121,13 @@ effRCM2 = t*-1
 scenGCM1RCM1 = effGCM1 + effRCM1 + rnorm(n=n,sd=0.5)
 scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n,sd=0.5)
 scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n,sd=0.5)
-Y = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
+Y.synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1)
 
 # Here, scenAvail indicates that the first scenario is obtained with the combination of the
 # GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
 # the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
 # of the GCM "GCM2" and RCM "RCM1".
-scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
+scenAvail.synth = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 
 ##########################################################################
 # RUN QUALYPSO
@@ -120,7 +136,7 @@ scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 # - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
 # run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
 # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
-# indexFutureYear.
+# iFut
 # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
 # characteristics nEff corresponds to the number of main effects which will be included in the
 # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
@@ -133,26 +149,77 @@ scenAvail = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RCM1'))
 listOption = list(nBurn=100,nKeep=100,quantileCompress=c(0.025,0.5,0.975))
 
 # run QUALYPSO
-QUALYPSOOUT = QUALYPSO(Y=Y, scenAvail=scenAvail, vecYears=2001:2020, listOption=listOption)
+QUALYPSO.synth = QUALYPSO(Y=Y.synth, scenAvail=scenAvail.synth, X=2001:2020, listOption=listOption)
 
 ##########################################################################
 # SOME PLOTS
 ##########################################################################
 # plot grand mean
-plotQUALYPSOgrandmean(QUALYPSOOUT)
+plotQUALYPSOgrandmean(QUALYPSO.synth,xlab="Years")
 
 # plot main GCM effects
-plotQUALYPSOeffect(QUALYPSOOUT,iEff=1)
+plotQUALYPSOeffect(QUALYPSO.synth,iEff=1,xlab="Years")
 
 # plot main RCM effects
-plotQUALYPSOeffect(QUALYPSOOUT,iEff=2)
+plotQUALYPSOeffect(QUALYPSO.synth,iEff=2,xlab="Years")
 
 # plot fraction of total variance for the differences sources of uncertainty
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSOOUT)
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.synth,xlab="Years")
 
 # plot mean prediction and total variance with the differences sources of uncertainty
-# for one scenario (e.g. a RCP scenario)
-plotQUALYPSOTotalVarianceByScenario(QUALYPSOOUT,iEff=1,nameScenario='GCM1')
+plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.synth,xlab="Years")
+
+#____________________________________________________________
+# EXAMPLE OF QUALYPSO WHEN THE PREDICTOR IS TIME
+#____________________________________________________________
+
+# list of options
+listOption = list(typeChangeVariable='abs')
+
+# call QUALYPSO
+QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,Xref=1999,
+                         Xfut=Xfut_time,listOption=listOption)
+
+# grand mean effect
+plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
+
+# main GCM effects
+plotQUALYPSOeffect(QUALYPSO.time,iEff = 1,xlab="Years")
+
+# main RCM effects
+plotQUALYPSOeffect(QUALYPSO.time,iEff = 2,xlab="Years")
+
+# mean change and associated uncertainties
+plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.time,xlab="Years")
+
+# variance decomposition
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
+
+#____________________________________________________________
+# EXAMPLE OF QUALYPSO WHEN THE PREDICTOR IS THE GLOBAL TEMPERATURE
+#____________________________________________________________
+
+# list of options
+listOption = list(typeChangeVariable='abs')
+
+# call QUALYPSO
+QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,Xref=13,
+                              Xfut=Xfut_globaltas,listOption=listOption)
+
+# grand mean effect
+plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+
+# main GCM effects
+plotQUALYPSOeffect(QUALYPSO.globaltas,iEff = 1,xlab="Global temperature (Celsius)")
+
+# main RCM effects
+plotQUALYPSOeffect(QUALYPSO.globaltas,iEff = 2,xlab="Global temperature (Celsius)")
+
+# mean change and associated uncertainties
+plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+
+# variance decomposition
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
 
 }
 \references{
