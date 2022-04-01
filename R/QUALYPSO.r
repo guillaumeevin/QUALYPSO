@@ -14,7 +14,7 @@
 ###
 ### references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 ### Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-### Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+### Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 ###
 ###
 ###===============================###===============================###
@@ -35,7 +35,7 @@
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+#' Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 get.Qstar.mat = function(p){
   # initialize matrix
   M = matrix(NA,nrow=p,ncol=(p-1))
@@ -71,7 +71,7 @@ get.Qstar.mat = function(p){
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+#' Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 get.Qmat = function(p){
   # get Qstar
   Qstar = get.Qstar.mat(p)
@@ -90,7 +90,8 @@ get.Qmat = function(p){
 #' of \code{nY} time steps (e.g. number of years).
 #'
 #' @param Y matrix of simulation chains: \code{nS} x \code{nY}
-#' @param parSmooth smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
+#' @param spar smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
+#' @param lambda smoothing parameter \code{lambda} in \code{\link[stats]{smooth.spline}}
 #' @param Xmat matrix of predictors corresponding to the projections, e.g. time or global temperature.
 #' @param Xref reference/control value of the predictor (e.g. the reference period).
 #' @param Xfut values of the predictor over which the ANOVA will be applied.
@@ -114,8 +115,8 @@ get.Qmat = function(p){
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
-fit.climate.response = function(Y, parSmooth, Xmat, Xref, Xfut, typeChangeVariable){
+#' Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
+fit.climate.response = function(Y, spar, lambda, Xmat, Xref, Xfut, typeChangeVariable){
 
   # number of simulation chains
   nS = nrow(Y)
@@ -138,7 +139,11 @@ fit.climate.response = function(Y, parSmooth, Xmat, Xref, Xfut, typeChangeVariab
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
-    smooth.spline.out<-stats::smooth.spline(Xs[zz],Ys[zz],spar=parSmooth)
+    if(!is.null(spar)){
+      smooth.spline.out<-stats::smooth.spline(Xs[zz],Ys[zz],spar=spar)
+    }else{
+      smooth.spline.out<-stats::smooth.spline(Xs[zz],Ys[zz],lambda=lambda)
+    }
 
     # store spline object
     climateResponse[[iS]] = smooth.spline.out
@@ -200,7 +205,7 @@ fit.climate.response = function(Y, parSmooth, Xmat, Xref, Xfut, typeChangeVariab
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+#' Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 #'
 #' @author Guillaume Evin
 QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
@@ -412,12 +417,24 @@ QUALYPSO.check.option = function(listOption){
     listOption = list()
   }
 
-  # parSmooth
-  if('parSmooth' %in% names(listOption)){
-    parSmooth = listOption[['parSmooth']]
-    if(!(is.numeric(parSmooth)&(parSmooth>0&parSmooth<=10))) stop('parSmooth must be in ]0,10]')
+  # lambda
+  if('lambda' %in% names(listOption)){
+    lambda = listOption[['lambda']]
+    if(!(is.numeric(lambda)&lambda>0)) stop('lambda must be >0')
   }else{
-    listOption[['parSmooth']] = 1
+    listOption[['lambda']] = NULL
+  }
+
+  # spar
+  if('spar' %in% names(listOption)){
+    spar = listOption[['spar']]
+    if(!(is.numeric(spar)&(spar>0&spar<=10))) stop('spar must be in ]0,10]')
+  }else{
+    if(is.null(listOption[['lambda']])){
+      listOption[['spar']] = 1
+    }else{
+      listOption[['spar']] = NULL
+    }
   }
 
   # typeChangeVariable
@@ -495,7 +512,7 @@ QUALYPSO.check.option = function(listOption){
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+#' Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
   #########  process input #########
   # number of grid points / years
@@ -674,7 +691,8 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #' Indeed, in this case, we run QUALYPSO only for one future predictor.
 #' @param listOption (optional) list of options
 #' \itemize{
-#'   \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
+#'   \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
+#'   \item \strong{lambda}: smoothing parameter \code{lambda} in \link[stats]{smooth.spline}
 #'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
 #'   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
 #'   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
@@ -853,7 +871,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL){
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-#' Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+#' Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 #'
 #' @export
 #'
@@ -976,7 +994,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
   ##############################################
   # extract climate response
   if(paralType == 'Time'){
-    climResponse = fit.climate.response(Y, parSmooth=listOption$parSmooth,
+    climResponse = fit.climate.response(Y, spar=listOption$spar, lambda=listOption$lambda,
                                         Xmat=Xmat, Xref=Xref, Xfut=Xfut,
                                         typeChangeVariable=listOption$typeChangeVariable)
 
@@ -1006,7 +1024,9 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
         phiAllTime[g,,] = NA
         varInterVariability[g] = NA
       }else{
-        climResponse[[g]] = fit.climate.response(Y[g,,], parSmooth=listOption$parSmooth,
+        climResponse[[g]] = fit.climate.response(Y[g,,],
+                                                 spar=listOption$spar,
+                                                 lambda=listOption$lambda,
                                                  Xmat=Xmat, Xref=Xref, Xfut=Xfut,
                                                  typeChangeVariable=listOption$typeChangeVariable)
 

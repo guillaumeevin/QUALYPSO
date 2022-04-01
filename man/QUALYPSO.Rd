@@ -40,7 +40,8 @@ Indeed, in this case, we run QUALYPSO only for one future predictor.}
 
 \item{listOption}{(optional) list of options
 \itemize{
-  \item \strong{parSmooth}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
+  \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
+  \item \strong{lambda}: smoothing parameter \code{lambda} in \link[stats]{smooth.spline}
   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
@@ -225,7 +226,7 @@ plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global temperatu
 \references{
 Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-Journal of Climate. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 }
 \author{
 Guillaume Evin

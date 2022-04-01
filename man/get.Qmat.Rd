@@ -19,7 +19,7 @@ See Eq. A6 in Evin et al., 2019.
 \references{
 Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
-Journal of Climate. J. Climate, 32, 2423–2440. \url{https://doi.org/10.1175/JCLI-D-18-0606.1}.
+Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 }
 \author{
 Guillaume Evin
