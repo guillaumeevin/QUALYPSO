@@ -26,7 +26,7 @@ list with the following fields:
 Partition sources of uncertainty in climate change responses for one lead time or one grid point.
 }
 \references{
-Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 }

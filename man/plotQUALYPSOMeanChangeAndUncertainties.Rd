@@ -6,7 +6,6 @@
 \usage{
 plotQUALYPSOMeanChangeAndUncertainties(
   QUALYPSOOUT,
-  probCI = 0.9,
   col = NULL,
   ylim = NULL,
   xlab = "",
@@ -17,8 +16,6 @@ plotQUALYPSOMeanChangeAndUncertainties(
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
-
-\item{probCI}{probability for the dredible interval, =0.9 by default}
 
 \item{col}{colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively}
 

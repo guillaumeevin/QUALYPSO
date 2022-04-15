@@ -6,7 +6,6 @@
 \usage{
 plotQUALYPSOgrandmean(
   QUALYPSOOUT,
-  CIlevel = c(0.025, 0.975),
   lim = NULL,
   col = "black",
   xlab = "",
@@ -17,8 +16,6 @@ plotQUALYPSOgrandmean(
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
-
-\item{CIlevel}{probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}}
 
 \item{lim}{y-axis limits (default is NULL)}
 
@@ -33,7 +30,7 @@ plotQUALYPSOgrandmean(
 \item{...}{additional arguments to be passed to \code{\link[graphics]{plot}}}
 }
 \description{
-Plot prediction of grand mean ensemble. By default, we plot the credible interval corresponding to a probability 0.95.
+Plot prediction of grand mean ensemble.
 }
 \author{
 Guillaume Evin

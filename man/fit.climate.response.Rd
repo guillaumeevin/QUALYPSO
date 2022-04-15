@@ -4,14 +4,12 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, spar, lambda, Xmat, Xref, Xfut, typeChangeVariable)
+fit.climate.response(Y, spar, Xmat, Xref, Xfut, typeChangeVariable)
 }
 \arguments{
 \item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
 
 \item{spar}{smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]}
-
-\item{lambda}{smoothing parameter \code{lambda} in \code{\link[stats]{smooth.spline}}}
 
 \item{Xmat}{matrix of predictors corresponding to the projections, e.g. time or global temperature.}
 
@@ -39,7 +37,7 @@ of \code{nY} time steps (e.g. number of years).
 See \code{\link{QUALYPSO}} for further information on arguments \code{indexReferenceYear} and \code{typeChangeVariable}.
 }
 \references{
-Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 }

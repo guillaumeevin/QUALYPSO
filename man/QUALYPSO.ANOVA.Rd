@@ -4,31 +4,82 @@
 \alias{QUALYPSO.ANOVA}
 \title{QUALYPSO.ANOVA}
 \usage{
-QUALYPSO.ANOVA(phiStar, scenAvail, listOption = NULL)
+QUALYPSO.ANOVA(phiStar, scenAvail, listOption = NULL, namesEff)
 }
 \arguments{
-\item{phiStar}{matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}. \code{n} can be the number of time steps or the number of grid points}
+\item{phiStar}{matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}.
+\code{n} can be the number of time steps or the number of grid points}
 
 \item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}}
 
 \item{listOption}{list of options (see \code{\link{QUALYPSO}})}
+
+\item{namesEff}{names of the main effects}
 }
 \value{
 list with the following fields:
+
 \itemize{
-  \item \strong{QUANT}: list of quantiles from the posterior distributions of inferred quantities
-  \item \strong{MEAN}: list of mean of the posterior distributions of inferred quantities
-  \item \strong{varEffect}: matrix \code{nEff} x \code{n} of variances related to the main effects
-  \item \strong{varResidualEffect}: vector of length \code{n} of variances of residual effects
-  \item \strong{listOption}: list of options used to obtained these results (obtained from \code{\link{QUALYPSO.check.option}})
-  \item \strong{listScenarioInput}: list of scenario characteristics (obtained from \code{\link{QUALYPSO.process.scenario}})
+  \item \strong{GRANDMEAN}: List of estimates for the grand mean:
+  \itemize{
+     \item {strong}: MEAN: vector of length \code{n} of posterior means
+     \item {strong}: SD: vector of length \code{n} of posterior standard dev.
+     \item {strong}: CI: matrix \code{n} x 2 of credible intervals of
+     probability \code{probCI} given in \code{listOption}.
+     \item {strong}: QUANT: matrix \code{n} x \code{nQ} of quantiles related
+     to the probabilities \code{quantilePosterior} given in \code{listOption}
+  }
+  \item \strong{RESIDUALVAR}: List of estimates for the variance of the
+  residual errors:
+  \itemize{
+     \item {strong}: MEAN: vector of length \code{n} of posterior means
+     \item {strong}: SD: vector of length \code{n} of posterior standard dev.
+     \item {strong}: CI: matrix \code{n} x 2 of credible intervals of
+     probability \code{probCI} given in \code{listOption}.
+     \item {strong}: QUANT: matrix \code{n} x \code{nQ} of quantiles related
+     to the probabilities \code{quantilePosterior} given in \code{listOption}
+  }
+  \item \strong{MAINEFFECT}: List of estimates for the main effects. For each
+  main effect (GCM, RCM,..), each element of the list contains a list with:
+  \itemize{
+     \item {strong}: MEAN: matrix \code{n} x \code{nTypeEff} of posterior means
+     \item {strong}: SD: matrix \code{n} x \code{nTypeEff} of posterior standard dev.
+     \item {strong}: CI: array \code{n} x 2 x \code{nTypeEff} of credible
+     intervals of probability \code{probCI} given in \code{listOption}.
+     \item {strong}: QUANT: array \code{n} x \code{nQ} x \code{nTypeEff} of
+     quantiles related to the probabilities \code{quantilePosterior} given in
+     \code{listOption}
+  }
+  \item \strong{CHANGEBYEFFECT}: For each main effect, list of estimates for
+  the mean change by main effect, i.e. mean change by scenario (RCP4.5). For
+  each main effect (GCM, RCM,..), each element of the list contains a list with:
+  \itemize{
+     \item {strong}: MEAN: matrix \code{n} x \code{nTypeEff} of posterior means
+     \item {strong}: SD: matrix \code{n} x \code{nTypeEff} of posterior standard dev.
+     \item {strong}: CI: array \code{n} x 2 x \code{nTypeEff} of credible
+     intervals of probability \code{probCI} given in \code{listOption}.
+     \item {strong}: QUANT: array \code{n} x \code{nQ} x \code{nTypeEff} of
+     quantiles related to the probabilities \code{quantilePosterior} given in
+     \code{listOption}
+  }
+  \item \strong{EFFECTVAR}: variability related to the main effects (i.e.
+  variability between the different RCMs, GCMs,..). Matrix \code{n} x
+  \code{nTypeEff}
+  \item \strong{CONTRIB_EACH_EFFECT}: Contribution of each individual effect
+  to its component (percentage), e.g. what is the contribution of GCM1 to the
+   variability related to GCMs. For each main effect (GCM, RCM,..), each
+   element of the list contains a matrix \code{n} x \code{nTypeEff}
+  \item \strong{listOption}: list of options used to obtained these results
+   (obtained from \code{\link{QUALYPSO.check.option}})
+  \item \strong{listScenarioInput}: list of scenario characteristics
+   (obtained from \code{\link{QUALYPSO.process.scenario}})
 }
 }
 \description{
 Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 }
 \references{
-Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
 }

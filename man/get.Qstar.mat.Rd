@@ -16,9 +16,9 @@ get.Qstar.mat(p)
 Provide matrix containing Helmert contrasts (see Eq. A7 in Evin et al., 2019).
 }
 \references{
-Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie. (2019) <doi:10.1175/JCLI-D-18-0606.1>.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020) <doi:10.1175/JCLI-D-18-0606.1>.
 
-Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie.
+Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
 }

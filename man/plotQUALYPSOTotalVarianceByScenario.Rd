@@ -6,9 +6,8 @@
 \usage{
 plotQUALYPSOTotalVarianceByScenario(
   QUALYPSOOUT,
-  iEff,
+  nameEff,
   nameScenario,
-  probCI = 0.9,
   col = NULL,
   ylim = NULL,
   xlab = "",
@@ -20,13 +19,12 @@ plotQUALYPSOTotalVarianceByScenario(
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
 
-\item{iEff}{index in \code{scenAvail} corresponding to the scenarios (e.g. RCP scenarios)}
+\item{nameEff}{name of the main effect to be plotted in \code{QUALYPSOOUT$namesEff}}
 
 \item{nameScenario}{name of the scenario to be plotted (as provided in \code{scenAvail})}
 
-\item{probCI}{probability for the dredible interval, =0.9 by default}
-
-\item{col}{colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively}
+\item{col}{colors for each source of uncertainty, the first two colors
+corresponding to internal variability and residual variability, respectively}
 
 \item{ylim}{y-axis limits}
 

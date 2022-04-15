@@ -6,9 +6,8 @@
 \usage{
 plotQUALYPSOeffect(
   QUALYPSOOUT,
-  iEff,
+  nameEff,
   includeMean = FALSE,
-  CIlevel = c(0.025, 0.975),
   lim = NULL,
   col = 1:20,
   xlab = "",
@@ -20,11 +19,9 @@ plotQUALYPSOeffect(
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
 
-\item{iEff}{index of the main effect to be plotted in \code{QUALYPSOOUT$listScenarioInput$listEff}}
+\item{nameEff}{name of the main effect to be plotted in \code{QUALYPSOOUT$namesEff}}
 
 \item{includeMean}{if TRUE, the grand mean is added to the main effect in the plot}
-
-\item{CIlevel}{probabilities for the credible intervals, default is equal to \code{c(0.025,0.975)}}
 
 \item{lim}{y-axis limits (default is NULL)}
 
