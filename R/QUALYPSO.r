@@ -135,6 +135,7 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
     # projection for this simulation chain
     Ys = Y[iS,]
     Xs = Xmat[iS,]
+    Xrefs = Xref[iS]
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
@@ -150,7 +151,7 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
     phiS = predict(smooth.spline.out, Xfut)$y
 
     # climate response of the reference/control time/global tas
-    phiC = predict(smooth.spline.out, Xref)$y
+    phiC = predict(smooth.spline.out, Xrefs)$y
 
     # store climate response for this simulation chain
     phi[iS,] = phiS
@@ -959,8 +960,8 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' a matrix of the same size as Y is these predictors are different for the scenarios. By default,
 #' a vector \code{1:nY} is created.
 #' @param Xref (optional) reference/control value of the predictor (e.g. the reference period).
-#' X must be included in the range of values of X. For example, if \code{X=1980:2100}, Xref can be any value
-#' between 1980 and 2100. By default, Xref is taken as the minimum value of X.
+#' \code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
+#'  for each climate projection. By default, Xref is taken as the minimum value of X.
 #' @param Xfut (optional) values of the predictor over which the ANOVA will be applied. It must be
 #' a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 #' \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
@@ -1025,7 +1026,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item DECOMPVAR: Decomposition of the total variability for each component
 #'   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
 #'   \item \strong{Xmat}: matrix of predictors
-#'   \item \strong{Xref}: reference predictor value
+#'   \item \strong{Xref}: reference predictor values
 #'   \item \strong{Xfut}: future predictor values
 #'   \item \strong{paralType}: type of parallelisation (Time or Grid)
 #'   \item \strong{namesEff}: names of the main effects
@@ -1219,16 +1220,18 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
   # Xref is the reference value for X used to compute absolute or relative changes
   # usually indicating the reference (control) period of the current climate
   if(is.null(Xref)){
-    Xref=min(Xmat)
+    Xref=rep(min(Xmat),nS)
   }else{
     # if Xref is provided, we check that is a single value within the values of X
-    if(length(Xref)!=1|!is.numeric(Xref)){
-      stop('Xref must be a single numeric value')
-    }else if(Xref<min(Xmat)|Xref>max(Xmat)){
-      stop('Xref must be within the range of X')
+    if(!any(length(Xref)==c(1,nS))|!is.numeric(Xref)){
+      stop('Xref must be a single numeric value or a vector of length nS')
+    }
+
+    # recycle Xref if it is a single value
+    if(length(Xref)==1){
+      Xref = rep(Xref,nS)
     }
   }
-
 
   # Xfut are the values for X used to compute absolute or relative changes
   # usually indicating the future periods. When a grid is provided for Y, it must

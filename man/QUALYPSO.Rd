@@ -26,8 +26,8 @@ a matrix of the same size as Y is these predictors are different for the scenari
 a vector \code{1:nY} is created.}
 
 \item{Xref}{(optional) reference/control value of the predictor (e.g. the reference period).
-X must be included in the range of values of X. For example, if \code{X=1980:2100}, Xref can be any value
-between 1980 and 2100. By default, Xref is taken as the minimum value of X.}
+\code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
+ for each climate projection. By default, Xref is taken as the minimum value of X.}
 
 \item{Xfut}{(optional) values of the predictor over which the ANOVA will be applied. It must be
 a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
@@ -96,7 +96,7 @@ list with the following fields:
   \item DECOMPVAR: Decomposition of the total variability for each component
   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
   \item \strong{Xmat}: matrix of predictors
-  \item \strong{Xref}: reference predictor value
+  \item \strong{Xref}: reference predictor values
   \item \strong{Xfut}: future predictor values
   \item \strong{paralType}: type of parallelisation (Time or Grid)
   \item \strong{namesEff}: names of the main effects
