@@ -7,7 +7,7 @@
 QUALYPSO.process.scenario(scenAvail)
 }
 \arguments{
-\item{scenAvail}{matrix of available combinations \code{nS} x \code{nEff}}
+\item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios}
 }
 \value{
 list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,

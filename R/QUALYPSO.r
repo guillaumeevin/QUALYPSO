@@ -342,7 +342,7 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
 #'
 #' Process input scenarios.
 #'
-#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
+#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #'
 #' @return list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
 #' indexEffInCompScen, Qmat})
@@ -426,7 +426,7 @@ QUALYPSO.check.option = function(listOption){
     ANOVAmethod = listOption[['ANOVAmethod']]
     if(!(ANOVAmethod%in%c('QUALYPSO','lm'))) stop("ANOVAmethod must be equal to 'QUALYPSO' or 'lm'")
   }else{
-    listOption[['ANOVAmethod']] = 'QUALYPSO'
+    listOption[['ANOVAmethod']] = 'lm'
   }
 
   # typeChangeVariable
@@ -495,7 +495,7 @@ QUALYPSO.check.option = function(listOption){
 #'
 #' @param phiStar matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}.
 #' \code{n} can be the number of time steps or the number of grid points
-#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
+#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #' @param listOption list of options (see \code{\link{QUALYPSO}})
 #' @param namesEff names of the main effects
 #'
@@ -745,7 +745,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 #'
 #' @param phiStar matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}. \code{n} can be the number of time steps or the number of grid points
-#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}
+#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #' @param listOption list of options (see \code{\link{QUALYPSO}})
 #' @param namesEff names of the main effects
 #'
@@ -822,6 +822,9 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
   for(i in 1:n){
     lm.data$phiStar=phiStar[,i]
     lm.out[[i]] = lm(formula, lm.data,contrasts=list.contrasts)
+    if(any(is.na(lm.out[[i]]$coefficients))){
+      stop("Undefined effects probably due to an ill-posed ANOVA")
+    }
     lm.sum[[i]] = summary(lm.out[[i]])
   }
 
@@ -950,18 +953,19 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #==============================================================================
 #' QUALYPSO
 #'
-#' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
+#' Partition uncertainty in climate responses using an ANOVA applied to climate change responses.
 #'
-#' @param Y matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections
-#' @param scenAvail matrix of available combinations \code{nS} x \code{nEff}. The number of characteristics \code{nEff} corresponds to the
-#' number of main effects which will be included in the ANOVA model.
+#' @param Y matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.
+#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
+#' (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios. The number of characteristics
+#'  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.
 #' @param X (optional) predictors corresponding to the projections, e.g. time or global temperature.
-#' It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100} or
-#' a matrix of the same size as Y is these predictors are different for the scenarios. By default,
+#' It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100}) or
+#' a matrix of the same size as Y if these predictors are different for the scenarios. By default,
 #' a vector \code{1:nY} is created.
 #' @param Xref (optional) reference/control value of the predictor (e.g. the reference period).
 #' \code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
-#'  for each climate projection. By default, Xref is taken as the minimum value of X.
+#'  for each climate projection. By default, \code{Xref} is taken as the minimum value of X.
 #' @param Xfut (optional) values of the predictor over which the ANOVA will be applied. It must be
 #' a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 #' \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
@@ -971,46 +975,73 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' Indeed, in this case, we run QUALYPSO only for one future predictor.
 #' @param listOption (optional) list of options
 #' \itemize{
-#'   \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1]
-#'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative)
-#'   \item \strong{ANOVAmethod}: ANOVA method: "QUALYPSO" applies the method described in Evin et al. (2020), "lm" applies a simple linear model to estimate the main effects.
-#'   \item \strong{nBurn}: number of burn-in samples (default: 1000). If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
-#'   \item \strong{nKeep}: number of kept samples (default: 2000). If \code{nKeep} is too small, MCMC samples might not be represent correctly the posterior
+#'   \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1].
+#'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative).
+#'   \item \strong{ANOVAmethod}: ANOVA method: "QUALYPSO" applies the method described in Evin et al. (2020),
+#'   "lm" applies a simple linear model to estimate the main effects.
+#'   \item \strong{nBurn}: if \code{ANOVAmethod=="QUALYPSO"}, number of burn-in samples (default: 1000).
+#'   If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
+#'   \item \strong{nKeep}: if \code{ANOVAmethod=="QUALYPSO"}, number of kept samples (default: 2000).
+#'   If \code{nKeep} is too small, MCMC samples might not represent correctly the posterior
 #'   distributions of inferred parameters.
-#'   \item \strong{nCluster}: number of clusters used for the parallelization (default: 1). When \code{nCluster} is greater than one, parallelization is used to
+#'   \item \strong{nCluster}: number of clusters used for the parallelization (default: 1).
+#'   When \code{nCluster} is greater than one, parallelization is used to
 #'   apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
-#'   \item \strong{probCI}: probability (in [0,1]) for the confidence intervals \code{probCI = 0.9} by default
-#'   \item \strong{quantilePosterior}: vector of probabilities (in [0,1]) for which we compute the quantiles from the posterior distributions
-#'    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default
+#'   \item \strong{probCI}: probability (in [0,1]) for the confidence intervals, \code{probCI = 0.9} by default.
+#'   \item \strong{quantilePosterior}: vector of probabilities (in [0,1]) for which
+#'   we compute the quantiles from the posterior distributions
+#'    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default.
 #' }
 #'
-#' @return  list with the following fields:
+#' @return  List providing the results for each of the \code{n} values of \code{Xfut}
+#' if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the following fields:
 #' \itemize{
 #'   \item \strong{CLIMATEESPONSE}: list of climate change responses and
 #'  corresponding internal variability. Contains \code{phiStar} (climate change
 #'  responses), \code{etaStar} (deviation from the climate change responses as
-#'  a result of internal variability), and \code{phi} (fitted climate responses)
+#'  a result of internal variability), and \code{phi} (fitted climate responses).
 #'   \item \strong{GRANDMEAN}: List of estimates for the grand mean:
 #'   \itemize{
-#'      \item {strong}: MEAN: vector of length \code{n} of means
-#'      \item {strong}: SD: vector of length \code{n} of standard dev.
-#'      \item {strong}: CI: matrix \code{n} x 2 of credible intervals of
-#'      probability \code{probCI} given in \code{listOption}.
+#'      \item \strong{MEAN}: vector of length \code{n} of means.
+#'      \item \strong{SD}: vector of length \code{n} of standard dev.
+#'      if \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{CI}: matrix \code{n} x 2 of credible intervals of
+#'      probability \code{probCI} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{QUANT}: matrix \code{n} x \code{nQ} of quantiles of
+#'      probability \code{quantilePosterior} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
 #'   }
 #'   \item \strong{MAINEFFECT}: List of estimates for the main effects. For each
 #'   main effect (GCM, RCM,..), each element of the list contains a list with:
 #'   \itemize{
-#'      \item {strong}: MEAN: matrix \code{n} x \code{nTypeEff}
+#'      \item \strong{MEAN}: matrix \code{n} x \code{nTypeEff}
+#'      \item \strong{SD}: matrix \code{n} x \code{nTypeEff} of standard dev.
+#'      if \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{CI}: array \code{n} x 2 x \code{nTypeEff} of credible
+#'      intervals of probability \code{probCI} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{QUANT}: array \code{n} x \code{nQ} x \code{nTypeEff} of
+#'      quantiles of probability \code{quantilePosterior} given in
+#'      \code{listOption} if \code{ANOVAmethod=="QUALYPSO"}.
 #'   }
 #'   \item \strong{CHANGEBYEFFECT}: For each main effect, list of estimates for
-#'   the mean change by main effect, i.e. mean change by scenario (RCP4.5). For
+#'   the mean change by main effect, i.e. mean change by scenario. For
 #'   each main effect (GCM, RCM,..), each element of the list contains a list with:
 #'   \itemize{
-#'      \item {strong}: MEAN: matrix \code{n} x \code{nTypeEff}
+#'      \item \strong{MEAN}: matrix \code{n} x \code{nTypeEff}
+#'      \item \strong{SD}: matrix \code{n} x \code{nTypeEff} of standard dev.
+#'      if \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{CI}: array \code{n} x 2 x \code{nTypeEff} of credible
+#'      intervals of probability \code{probCI} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{QUANT}: array \code{n} x \code{nQ} x \code{nTypeEff} of
+#'      quantiles of probability \code{quantilePosterior} given in
+#'      \code{listOption} if \code{ANOVAmethod=="QUALYPSO"}.
 #'   }
-#'   \item \strong{EFFECTVAR}: variability related to the main effects (i.e.
-#'   variability between the different RCMs, GCMs,..). Matrix \code{n} x
-#'   \code{nTypeEff}
+#'   \item \strong{EFFECTVAR}: Matrix \code{n} x \code{nTypeEff} giving, for each
+#'   time variability related to the main effects (i.e.
+#'   variability between the different RCMs, GCMs,..).
 #'   \item \strong{CONTRIB_EACH_EFFECT}: Contribution of each individual effect
 #'   to its component (percentage), e.g. what is the contribution of GCM1 to the
 #'    variability related to GCMs. For each main effect (GCM, RCM,..), each
@@ -1018,12 +1049,20 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item \strong{RESIDUALVAR}: List of estimates for the variance of the
 #'   residual errors:
 #'   \itemize{
-#'      \item {strong}: MEAN: vector of length \code{n}
+#'      \item \strong{MEAN}: vector of length \code{n}.
+#'      \item \strong{SD}: vector of length \code{n} of standard dev.
+#'      if \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{CI}: matrix \code{n} x 2 of credible intervals of
+#'      probability \code{probCI} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
+#'      \item \strong{QUANT}: matrix \code{n} x \code{nQ} of quantiles of
+#'      probability \code{quantilePosterior} given in \code{listOption} if
+#'      \code{ANOVAmethod=="QUALYPSO"}.
 #'   }
-#'   \item INTERNALVAR: Internal variability (constant over time)
-#'   \item TOTALVAR: total variability, i.e. the sum of internal variability,
-#'       residual variability and variability related to the main effect
-#'   \item DECOMPVAR: Decomposition of the total variability for each component
+#'   \item \strong{INTERNALVAR}: Internal variability (constant over time)
+#'   \item \strong{TOTALVAR}: total variability, i.e. the sum of internal variability,
+#'       residual variability and variability related to the main effects
+#'   \item \strong{DECOMPVAR}: Decomposition of the total variability for each component
 #'   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
 #'   \item \strong{Xmat}: matrix of predictors
 #'   \item \strong{Xref}: reference predictor values
@@ -1074,15 +1113,16 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
 #' # iFut
 #' # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
-#' # characteristics nEff corresponds to the number of main effects which will be included in the
+#' # characteristics nEff corresponds to the number of main effects that will be included in the
 #' # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
 #' # and RCMs.
 #'
-#' # Many options can be specified in the argument "listOption". Here, we change the default values
-#' # for nBurn and nKeep in order to speed up computation time for this small example. However, it must
-#' # be noticed that convergence and sampling of the posterior distributions often require higher
-#' # values for these two parameters.
-#' listOption = list(nBurn=100,nKeep=100,quantilePosterior=c(0.025,0.5,0.975))
+#' # Many options can be specified in the argument "listOption". When ANOVAmethod=="QUALYPSO"
+#' # a Bayesian inference is performed. Here, we change the default values for nBurn and nKeep
+#' # in order to speed up computation time for this small example. However, it must be noticed
+#' # that convergence and sampling of the posterior distributions often require higher values
+#' #  for these two arguments.
+#' listOption = list(nBurn=100,nKeep=100,ANOVAmethod="QUALYPSO",quantilePosterior=c(0.025,0.5,0.975))
 #'
 #' # run QUALYPSO
 #' QUALYPSO.synth = QUALYPSO(Y=Y.synth, scenAvail=scenAvail.synth, X=2001:2020, listOption=listOption)
