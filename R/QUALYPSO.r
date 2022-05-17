@@ -671,6 +671,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 
   # main effects
   for(i.eff in 1:nEff){
+    eff = namesEff[i.eff]
     #============
     # MAINEFFECT
     #============
@@ -686,7 +687,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
     lHatMain$CI = aperm(eff.ci, c(2,1,3))
     eff.quant = apply(eff.POST,c(1,3),quantile,probs=qPost)
     lHatMain$QUANT = aperm(eff.quant, c(2,1,3))
-    MAINEFFECT[[namesEff[i.eff]]] = lHatMain
+    MAINEFFECT[[eff]] = lHatMain
 
     #===============
     # CHANGEBYEFFECT
@@ -703,7 +704,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
     lHatchange$CI = aperm(eff.ci, c(2,1,3))
     eff.quant = apply(meanChange.POST,c(1,3),quantile,probs=qPost)
     lHatchange$QUANT = aperm(eff.quant, c(2,1,3))
-    CHANGEBYEFFECT[[namesEff[i.eff]]] = lHatchange
+    CHANGEBYEFFECT[[eff]] = lHatchange
 
     #============
     # EFFECTVAR
@@ -723,7 +724,7 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
       # contribution of this individual effect, as a percentage
       matContrib[,iIndEff] = indEff2/infEff2Tot
     }
-    CONTRIB_EACH_EFFECT[[namesEff[i.eff]]] = matContrib
+    CONTRIB_EACH_EFFECT[[eff]] = matContrib
   }
 
 
@@ -888,6 +889,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 
   # main effects
   for(i.eff in 1:nEff){
+    eff = namesEff[i.eff]
     #============
     # MAINEFFECT
     #============
@@ -896,35 +898,32 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
     lHat$MEAN = matrix(data = 0, nrow = n, ncol = nTypeEff[i.eff])
     for(i in 1:n){
       lm.out.i = lm.out[[i]]
-      matchEff = match(listEff[[i.eff]],listEff.LM[[namesEff[i.eff]]])
+      matchEff = match(listEff[[i.eff]],listEff.LM[[eff]])
       e.raw = lm.out.i$coefficients[lm.out.i$assign==i.eff]
       e.unsorted = c(e.raw,-sum(e.raw))
       lHat$MEAN[i,] = e.unsorted[matchEff]
     }
-    MAINEFFECT[[namesEff[i.eff]]] = lHat
+    MAINEFFECT[[eff]] = lHat
 
 
     #===============
     # CHANGEBYEFFECT
     #===============
-    # retrieve estimates for the mean change by effect
-    CHANGEBYEFFECT = MAINEFFECT
-    for(i in 1:n){
-      changeHat = CHANGEBYEFFECT[[namesEff[i.eff]]]$MEAN[i,] + GRANDMEAN$MEAN[i]
-      CHANGEBYEFFECT[[namesEff[i.eff]]]$MEAN[i,] = changeHat
-    }
+    changeHat = list()
+    changeHat$MEAN = MAINEFFECT[[eff]]$MEAN + replicate(nTypeEff[i.eff],GRANDMEAN$MEAN)
+    CHANGEBYEFFECT[[eff]] = changeHat
 
     #============
     # EFFECTVAR
     #============
     # predictive variance: mean of variances, which correspond to the mean of squares since the mean is 0 by constraint (see Eq 16, 17 and 18)
-    EFFECTVAR[,i.eff] = apply(MAINEFFECT[[namesEff[i.eff]]]$MEAN^2,1,mean)
+    EFFECTVAR[,i.eff] = apply(MAINEFFECT[[eff]]$MEAN^2,1,mean)
 
     #============
     # CONTRIB_EACH_EFFECT
     #============
     matContrib = matrix(data=0,nrow=n,ncol=nTypeEff[i.eff])
-    AllEff2 = MAINEFFECT[[namesEff[i.eff]]]$MEAN^2
+    AllEff2 = MAINEFFECT[[eff]]$MEAN^2
     for(iIndEff in 1:nTypeEff[i.eff]){
       # individual effect squared
       indEff2 = AllEff2[,iIndEff]
@@ -933,7 +932,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
       # contribution of this individual effect, as a percentage
       matContrib[,iIndEff] = indEff2/infEff2Tot
     }
-    CONTRIB_EACH_EFFECT[[namesEff[i.eff]]] = matContrib
+    CONTRIB_EACH_EFFECT[[eff]] = matContrib
   }
 
 
@@ -957,7 +956,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'
 #' @param Y matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.
 #' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
-#' (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios. The number of characteristics
+#' (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
 #'  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.
 #' @param X (optional) predictors corresponding to the projections, e.g. time or global temperature.
 #' It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100}) or
@@ -1108,7 +1107,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' # RUN QUALYPSO
 #' ##########################################################################
 #' # call main QUALYPSO function: two arguments are mandatory:
-#' # - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
+#' # - Y: Climate projections for nS scenarios and nY time steps. if Y is a matrix nS x nY, we
 #' # run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
 #' # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
 #' # iFut
@@ -1381,6 +1380,26 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
   }
 
   #====================================================================================================
+
+  ################
+  # Check for singularities
+
+  # contrasts
+  list.contrasts = list()
+  for(j in 1:length(namesEff)){
+    list.contrasts[[namesEff[j]]] = contr.sum
+  }
+  # formula
+  formula = paste0("phiStar ~ ",paste0(namesEff,collapse = " + "))
+  #lm
+  lm.data = scenAvail
+  lm.data$phiStar=phiStar.ANOVA[,ncol(phiStar.ANOVA)]
+  lm.out = lm(formula, lm.data,contrasts=list.contrasts)
+  if(any(is.na(lm.out$coefficients))){
+    stop("singular fit encountered: the effects cannot be estimated (ill-posed problem)")
+  }
+
+  ##################
   # ANOVA on phiStar
   if(listOption$ANOVAmethod=="QUALYPSO"){
     anova = QUALYPSO.ANOVA(phiStar = phiStar.ANOVA, scenAvail = scenAvail, listOption = listOption, namesEff = namesEff)
@@ -1447,6 +1466,70 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
 }
 
 
+#==============================================================================
+#' plotQUALYPSOclimateResponse
+#'
+#' Plot the climate responses.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param lim y-axis limits (default is NULL)
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="",
+                                             ylab="Climate response",...){
+  # vector of predictors
+  Xfut = QUALYPSOOUT$Xfut
+
+  # retrieve mean
+  phi = QUALYPSOOUT$CLIMATEESPONSE$phi
+
+
+  # initiate plot
+  if(is.null(lim)) lim = range(phi)
+  plot(-100,-100,xlim=range(Xfut),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+
+  for(i in 1:nrow(phi)){
+    lines(Xfut,phi[i,],lwd=3,col=i)
+  }
+}
+
+
+#==============================================================================
+#' plotQUALYPSOclimateChangeResponse
+#'
+#' Plot climate change responses.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param lim y-axis limits (default is NULL)
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOclimateChangeResponse = function(QUALYPSOOUT,lim=NULL,xlab="",
+                                             ylab="Climate change response",...){
+  # vector of predictors
+  Xfut = QUALYPSOOUT$Xfut
+
+  # retrieve mean
+  phiStar = QUALYPSOOUT$CLIMATEESPONSE$phiStar
+
+
+  # initiate plot
+  if(is.null(lim)) lim = range(phiStar)
+  plot(-100,-100,xlim=range(Xfut),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+
+  for(i in 1:nrow(phiStar)){
+    lines(Xfut,phiStar[i,],lwd=3,col=i)
+  }
+}
 
 #==============================================================================
 #' plotQUALYPSOgrandmean
@@ -1470,13 +1553,11 @@ plotQUALYPSOgrandmean = function(QUALYPSOOUT,lim=NULL,col='black',xlab="",
   Xfut = QUALYPSOOUT$Xfut
 
   # retrieve mean
-  meanRaw = QUALYPSOOUT$GRANDMEAN$MEAN
-  meanPred = predict(loess(meanRaw~Xfut))
+  meanPred = QUALYPSOOUT$GRANDMEAN$MEAN
 
   # retrieve limits
-  CIraw = QUALYPSOOUT$GRANDMEAN$CI
-  binf = predict(loess(CIraw[,1]~Xfut))
-  bsup = predict(loess(CIraw[,2]~Xfut))
+  binf = QUALYPSOOUT$GRANDMEAN$CI[,1]
+  bsup = QUALYPSOOUT$GRANDMEAN$CI[,2]
 
   # colors polygon
   colPoly = adjustcolor(col,alpha.f=0.2)
@@ -1537,22 +1618,15 @@ plotQUALYPSOeffect = function(QUALYPSOOUT,nameEff,includeMean=FALSE,lim=NULL,
   nEff = dim(EffHat$MEAN)[2]
 
   # retrieve mean
-  meanRaw = EffHat$MEAN
-  meanPred = apply(meanRaw,2,function(x) predict(loess(x~Xfut)))
+  meanPred = EffHat$MEAN
 
   # add CI if the ANOVA method is QUALYPSO
   add.CI = QUALYPSOOUT$listOption$ANOVAmethod=="QUALYPSO"
 
-  # get CI
-  if(add.CI){
-    CIRaw = EffHat$CI
-    CIsmooth = apply(CIRaw,c(2,3),function(x) predict(loess(x~Xfut)))
-  }
-
   # initiate plot
   if(is.null(lim)){
     if(add.CI){
-      lim = range(CIsmooth,na.rm=TRUE)
+      lim = range(EffHat$CI,na.rm=TRUE)
     }else{
       lim = range(meanPred,na.rm=TRUE)
     }
@@ -1565,7 +1639,7 @@ plotQUALYPSOeffect = function(QUALYPSOOUT,nameEff,includeMean=FALSE,lim=NULL,
 
     # add confidence interval
     if(add.CI){
-      polygon(c(Xfut,rev(Xfut)),c(CIsmooth[,1,i],rev(CIsmooth[,2,i])),col=colPoly,lty=0)
+      polygon(c(Xfut,rev(Xfut)),c(EffHat$CI[,1,i],rev(EffHat$CI[,2,i])),col=colPoly,lty=0)
     }
 
     # add median
@@ -1647,14 +1721,12 @@ plotQUALYPSOTotalVarianceDecomposition = function(QUALYPSOOUT,vecEff=NULL,
 
   # figure
   col = col[1:(nEff+2)]
-  cum=cum.smooth=rep(0,nFut)
+  cum=rep(0,nFut)
   plot(-1,-1,xlim=range(Xfut),ylim=c(0,1),xaxs="i",yaxs="i",las=1,xlab=xlab,ylab=ylab,...)
   for(i in 1:(nEff+2)){
-    cumPrevious = cum.smooth
+    cumPrevious = cum
     cum = cum + VARDECOMP[,i]
-    cum.smooth = predict(loess(cum~Xfut))
-    cum.smooth[cum.smooth<0] = 0
-    polygon(c(Xfut,rev(Xfut)),c(cumPrevious,rev(cum.smooth)),col=rev(col)[i],lty=1)
+    polygon(c(Xfut,rev(Xfut)),c(cumPrevious,rev(cum)),col=rev(col)[i],lty=1)
   }
   abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
 
@@ -1726,13 +1798,11 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,nameEff,nameScenario,
 
   # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
   limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nFut)
-  limIntInf[1,] = predict(loess(binf~Xfut))
-  limIntSup[1,] = predict(loess(bsup~Xfut))
+  limIntInf[1,] = binf
+  limIntSup[1,] = bsup
   for(i in 1:(nEff+1)){
-    binfi = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
-    limIntInf[i+1,] = predict(loess(binfi~Xfut))
-    bsupi = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
-    limIntSup[i+1,] = predict(loess(bsupi~Xfut))
+    limIntInf[i+1,] = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
+    limIntSup[i+1,] = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
   }
 
   # figure
@@ -1741,7 +1811,7 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,nameEff,nameScenario,
   for(i in 1:(nEff+2)){
     polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
   }
-  lines(Xfut,predict(loess(meanPred~Xfut)),col="white",lwd=1)
+  lines(Xfut,meanPred,col="white",lwd=1)
 
   # add horizontal lines
   abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
@@ -1802,13 +1872,11 @@ plotQUALYPSOMeanChangeAndUncertainties = function(QUALYPSOOUT,col=NULL,ylim=NULL
 
   # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
   limIntInf = limIntSup = matrix(nrow=nEff+2,ncol=nFut)
-  limIntInf[1,] = predict(loess(binf~Xfut))
-  limIntSup[1,] = predict(loess(bsup~Xfut))
+  limIntInf[1,] = binf
+  limIntSup[1,] = bsup
   for(i in 1:(nEff+1)){
-    binfi = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
-    limIntInf[i+1,] = predict(loess(binfi~Xfut))
-    bsupi = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
-    limIntSup[i+1,] = predict(loess(bsupi~Xfut))
+    limIntInf[i+1,] = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
+    limIntSup[i+1,] = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
   }
 
   # figure
@@ -1817,7 +1885,7 @@ plotQUALYPSOMeanChangeAndUncertainties = function(QUALYPSOOUT,col=NULL,ylim=NULL
   for(i in 1:(nEff+2)){
     polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
   }
-  lines(Xfut,predict(loess(meanPred~Xfut)),col="white",lwd=1)
+  lines(Xfut,meanPred,col="white",lwd=1)
 
   # add horizontal lines
   abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)

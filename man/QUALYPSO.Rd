@@ -18,7 +18,7 @@ QUALYPSO(
 \item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.}
 
 \item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
-(e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios. The number of characteristics
+(e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.}
 
 \item{X}{(optional) predictors corresponding to the projections, e.g. time or global temperature.
@@ -178,7 +178,7 @@ scenAvail.synth = data.frame(GCM=c('GCM1','GCM1','GCM2'),RCM=c('RCM1','RCM2','RC
 # RUN QUALYPSO
 ##########################################################################
 # call main QUALYPSO function: two arguments are mandatory:
-# - Y: Climate projections for nS scenarions and nY time steps. if Y is a matrix nS x nY, we
+# - Y: Climate projections for nS scenarios and nY time steps. if Y is a matrix nS x nY, we
 # run QUALYPSO nY times, for each time step. If Y is an array nG x nS x nY, for nG grid points,
 # we run QUALYPSO nG times, for each grid point, for one time step specified using the argument
 # iFut
