@@ -22,9 +22,10 @@ fit.climate.response(Y, spar, Xmat, Xref, Xfut, typeChangeVariable)
 \value{
 list with the following fields for each simulation chain:
 \itemize{
-  \item \strong{phiStar}: climate change response
-  \item \strong{etaStar}: internal variability
-  \item \strong{phi}: raw trend obtained using \link[stats]{smooth.spline}
+  \item \strong{phiStar}: \code{nS x nF}, climate change responses
+  \item \strong{etaStar}: \code{nS x nY}, deviation from the climate change response
+  due to the internal variability, for \code{Xmat}
+  \item \strong{phi}: \code{nS x nF}, raw trends obtained using \link[stats]{smooth.spline}
   \item \strong{climateResponse}: output from \link[stats]{smooth.spline}
   \item \strong{varInterVariability}: scalar, internal variability component of the MME
 }

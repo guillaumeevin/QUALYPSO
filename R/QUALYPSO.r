@@ -98,9 +98,10 @@ get.Qmat = function(p){
 #'
 #' @return list with the following fields for each simulation chain:
 #' \itemize{
-#'   \item \strong{phiStar}: climate change response
-#'   \item \strong{etaStar}: internal variability
-#'   \item \strong{phi}: raw trend obtained using \link[stats]{smooth.spline}
+#'   \item \strong{phiStar}: \code{nS x nF}, climate change responses
+#'   \item \strong{etaStar}: \code{nS x nY}, deviation from the climate change response
+#'   due to the internal variability, for \code{Xmat}
+#'   \item \strong{phi}: \code{nS x nF}, raw trends obtained using \link[stats]{smooth.spline}
 #'   \item \strong{climateResponse}: output from \link[stats]{smooth.spline}
 #'   \item \strong{varInterVariability}: scalar, internal variability component of the MME
 #' }
@@ -589,15 +590,12 @@ QUALYPSO.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
       Anova.POST[[i]] = QUALYPSO.ANOVA.i(phiStar.i=phiStar[,i], nMCMC=listOption$nMCMC,listScenarioInput = listScenarioInput)
     }
   }else{
-    cl <- parallel::makeCluster(listOption$nCluster)
-    doParallel::registerDoParallel(cl)
     i = NULL # avoid warning during check
     Anova.POST <- foreach(i=1:n, .multicombine=TRUE,
                           .export=c("QUALYPSO.ANOVA.i")) %dopar% {
                             POST.out = QUALYPSO.ANOVA.i(phiStar.i=phiStar[,i], nMCMC=listOption$nMCMC,listScenarioInput = listScenarioInput)
                             return(POST.out)
                           }
-    parallel::stopCluster(cl)
   }
 
 
@@ -965,11 +963,11 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' @param Xref (optional) reference/control value of the predictor (e.g. the reference period).
 #' \code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
 #'  for each climate projection. By default, \code{Xref} is taken as the minimum value of X.
-#' @param Xfut (optional) values of the predictor over which the ANOVA will be applied. It must be
+#' @param Xfut (optional) \code{nF} values of the predictor over which the ANOVA will be applied. It must be
 #' a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 #' \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
 #' maximum values of X if X is a matrix.
-#' @param iFut index in \code{1:length(Xfut)} corresponding to a future predictor value . This index is
+#' @param iFut index in \code{1:nF} corresponding to a future predictor value . This index is
 #' necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
 #' Indeed, in this case, we run QUALYPSO only for one future predictor.
 #' @param listOption (optional) list of options
@@ -990,6 +988,11 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item \strong{quantilePosterior}: vector of probabilities (in [0,1]) for which
 #'   we compute the quantiles from the posterior distributions
 #'    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default.
+#'   \item \strong{climResponse}: NULL by default. If it is provided, it must correspond to the outputs
+#'   of \code{\link{fit.climate.response}}, i.e. a list with \code{phiStar nS x nF}, \code{etaStar nS x nY},
+#'    \code{phi nS x nF} and \code{varInterVariability (scalar)} if Y is a matrix \code{nS} x \code{nY},
+#'    or a list with \code{phiStar nG x nS x nF}, \code{etaStar nG x nS x nY}, \code{phi nG x nS x nF} and
+#'     \code{varInterVariability vector of length nG} if Y is an array \code{nG} x \code{nS} x \code{nY}.
 #' }
 #'
 #' @return  List providing the results for each of the \code{n} values of \code{Xfut}
@@ -1305,7 +1308,11 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     }
   }
 
-
+  # register clusters
+  if(listOption$nCluster>1){
+    cl <- parallel::makeCluster(listOption$nCluster)
+    doParallel::registerDoParallel(cl)
+  }
 
 
   ##############################################
@@ -1323,10 +1330,12 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
   ##############################################
   # extract climate response
   if(paralType == 'Time'){
-    climResponse = fit.climate.response(Y,
-                                        spar=listOption$spar,
-                                        Xmat=Xmat, Xref=Xref, Xfut=Xfut,
-                                        typeChangeVariable=listOption$typeChangeVariable)
+    if(is.null(listOption$climResponse)){
+      climResponse = fit.climate.response(Y,
+                                          spar=listOption$spar,
+                                          Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                          typeChangeVariable=listOption$typeChangeVariable)
+    }
 
     # extract quantities from these fits
     phiStar = climResponse$phiStar
@@ -1340,32 +1349,65 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     phiStar.ANOVA = phiStar
 
   }else if(paralType == 'Grid'){
-    climResponse = list()
-    phiStarAllTime = etaStarAllTime = phiAllTime = array(dim=d)
-    varInterVariability = vector(length=nG)
-    for(g in 1:nG){
-      # check is some simulation chains are entirely missing
-      hasAllNa = apply(Y[g,,],1,function(x) all(is.na(x)))
+    if(is.null(listOption$climResponse)){
+      # initialise outputs
+      phiStar = phi = array(dim=c(nG,nS,length(Xfut)))
+      etaStar = array(dim=d)
+      varInterVariability = vector(length=nG)
 
-      if(any(hasAllNa)){
-        climResponse[[g]] = NULL
-        phiStarAllTime[g,,] = NA
-        etaStarAllTime[g,,] = NA
-        phiAllTime[g,,] = NA
-        varInterVariability[g] = NA
+      # parallelize if required
+      if(listOption$nCluster==1){
+        for(g in 1:nG){
+          # check is some simulation chains are entirely missing
+          hasAllNa = apply(Y[g,,],1,function(x) all(is.na(x)))
+          if(any(hasAllNa)){
+            phiStar[g,,] = NA
+            etaStar[g,,] = NA
+            phi[g,,] = NA
+            varInterVariability[g] = NA
+          }else{
+            climResponse = fit.climate.response(Y[g,,],
+                                                spar=listOption$spar,
+                                                Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                                typeChangeVariable=listOption$typeChangeVariable)
+
+            # extract quantities from these fits
+            phiStar[g,,] = climResponse$phiStar
+            etaStar[g,,] = climResponse$etaStar
+            phi[g,,] = climResponse$phi
+            varInterVariability[g] = climResponse$varInterVariability
+          }
+        }
       }else{
-        climResponse[[g]] = fit.climate.response(Y[g,,],
-                                                 spar=listOption$spar,
-                                                 Xmat=Xmat, Xref=Xref, Xfut=Xfut,
-                                                 typeChangeVariable=listOption$typeChangeVariable)
+        g = NULL # avoid warning during check
+        climResponse <- foreach(g=1:nG,.export=c("fit.climate.response")) %dopar% {
+          # check is some simulation chains are entirely missing
+          hasAllNa = apply(Y[g,,],1,function(x) all(is.na(x)))
+          if(any(hasAllNa)){
+            climResponse.g = list(phiStar = NA, etaStar = NA, phi = NA,
+                                  varInterVariability = NA)
+          }else{
+            climResponse.g = fit.climate.response(Y[g,,],
+                                                  spar=listOption$spar,
+                                                  Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                                  typeChangeVariable=listOption$typeChangeVariable)
+          }
+          return(climResponse.g)
+        }
 
-        # extract quantities from these fits
-        phiStar[g,,] = climResponse[[g]]$phiStar
-        etaStar[g,,] = climResponse[[g]]$etaStar
-        phi[g,,] = climResponse[[g]]$phi
-        varInterVariability[g] = climResponse[[g]]$varInterVariability
+        # fill the matrices
+        for(g in 1:nG){
+          phiStar[g,,] = climResponse[[g]]$phiStar
+          etaStar[g,,] = climResponse[[g]]$etaStar
+          phi[g,,] = climResponse[[g]]$phi
+          varInterVariability[g] = climResponse[[g]]$varInterVariability
+        }
       }
-
+    }else{
+      phiStar = climResponse$phiStar
+      etaStar = climResponse$etaStar
+      phi = climResponse$phi
+      varInterVariability = climResponse$varInterVariability
     }
 
     # phiStar for ANOVA
@@ -1445,6 +1487,11 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
   DECOMPVAR = Vbind/replicate(n = ncol(Vbind), TOTALVAR)
   colnames(DECOMPVAR) = c(namesEff,"ResidualVar","InternalVar")
 
+  # stop clusters
+  if(listOption$nCluster>1){
+    parallel::stopCluster(cl)
+  }
+
 
   #############################################
   # return results
@@ -1481,7 +1528,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
 #'
 #' @author Guillaume Evin
 plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="",
-                                             ylab="Climate response",...){
+                                       ylab="Climate response",...){
   # vector of predictors
   Xfut = QUALYPSOOUT$Xfut
 

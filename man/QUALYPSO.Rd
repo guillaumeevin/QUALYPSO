@@ -30,12 +30,12 @@ a vector \code{1:nY} is created.}
 \code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
  for each climate projection. By default, \code{Xref} is taken as the minimum value of X.}
 
-\item{Xfut}{(optional) values of the predictor over which the ANOVA will be applied. It must be
+\item{Xfut}{(optional) \code{nF} values of the predictor over which the ANOVA will be applied. It must be
 a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
 maximum values of X if X is a matrix.}
 
-\item{iFut}{index in \code{1:length(Xfut)} corresponding to a future predictor value . This index is
+\item{iFut}{index in \code{1:nF} corresponding to a future predictor value . This index is
 necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
 Indeed, in this case, we run QUALYPSO only for one future predictor.}
 
@@ -57,6 +57,11 @@ Indeed, in this case, we run QUALYPSO only for one future predictor.}
   \item \strong{quantilePosterior}: vector of probabilities (in [0,1]) for which
   we compute the quantiles from the posterior distributions
    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default.
+  \item \strong{climResponse}: NULL by default. If it is provided, it must correspond to the outputs
+  of \code{\link{fit.climate.response}}, i.e. a list with \code{phiStar nS x nF}, \code{etaStar nS x nY},
+   \code{phi nS x nF} and \code{varInterVariability (scalar)} if Y is a matrix \code{nS} x \code{nY},
+   or a list with \code{phiStar nG x nS x nF}, \code{etaStar nG x nS x nY}, \code{phi nG x nS x nF} and
+    \code{varInterVariability vector of length nG} if Y is an array \code{nG} x \code{nS} x \code{nY}.
 }}
 }
 \value{
