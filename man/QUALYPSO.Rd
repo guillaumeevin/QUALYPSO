@@ -58,10 +58,10 @@ Indeed, in this case, we run QUALYPSO only for one future predictor.}
   we compute the quantiles from the posterior distributions
    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default.
   \item \strong{climResponse}: NULL by default. If it is provided, it must correspond to the outputs
-  of \code{\link{fit.climate.response}}, i.e. a list with \code{phiStar nS x nF}, \code{etaStar nS x nY},
-   \code{phi nS x nF} and \code{varInterVariability (scalar)} if Y is a matrix \code{nS} x \code{nY},
-   or a list with \code{phiStar nG x nS x nF}, \code{etaStar nG x nS x nY}, \code{phi nG x nS x nF} and
-    \code{varInterVariability vector of length nG} if Y is an array \code{nG} x \code{nS} x \code{nY}.
+  of \code{\link{fit.climate.response}}, i.e. a list with \code{phiStar} [nS x nF], \code{etaStar} [nS x nY],
+   \code{phi} [nS x nF] and \code{varInterVariability} [scalar] if \code{Y} is a matrix [nS x nY],
+   or a list with \code{phiStar} [nG x nS x nF], \code{etaStar} [nG x nS x nY], \code{phi} [nG x nS x nF] and
+    \code{varInterVariability} vector of length \code{nG} if \code{Y} is an array [nG x nS x nY].
 }}
 }
 \value{
