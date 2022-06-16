@@ -1335,6 +1335,8 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
                                           spar=listOption$spar,
                                           Xmat=Xmat, Xref=Xref, Xfut=Xfut,
                                           typeChangeVariable=listOption$typeChangeVariable)
+    }else{
+      climResponse = listOption$climResponse
     }
 
     # extract quantities from these fits
