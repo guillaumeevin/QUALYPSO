@@ -1,8 +1,8 @@
 ###===============================###===============================###
 ### Guillaume Evin
-### 02/05/2019, Grenoble
-###  IRSTEA
-### guillaume.evin@irstea.fr
+### 30/06/2022, Grenoble
+###  INRAE
+### guillaume.evin@inrae.fr
 ###
 ### These functions use data augmentation and Bayesian techniques for the assessment
 ### of single-member and incomplete ensembles of climate projections.
@@ -1944,5 +1944,91 @@ plotQUALYPSOMeanChangeAndUncertainties = function(QUALYPSOOUT,col=NULL,ylim=NULL
   if(addLegend){
     namesEff = QUALYPSOOUT$names
     legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.','Int. Variab.'))
+  }
+}
+
+
+#==============================================================================
+#' plotQUALYPSOMeanChangeAndUncertaintiesBetatest
+#'
+#' Plot fraction of total variance explained by each source of uncertainty.
+#'
+#' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param col colors for each source of uncertainty, the first two colors corresponding to internal variability and residual variability, respectively
+#' @param ylim y-axis limits
+#' @param xlab x-axis label
+#' @param ylab y-axis label
+#' @param addLegend if TRUE, a legend is added
+#' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
+#'
+#' @export
+#'
+#' @author Guillaume Evin
+plotQUALYPSOMeanChangeAndUncertaintiesBetatest = function(QUALYPSOOUT,col=NULL,ylim=NULL,
+                                                  xlab="",ylab="Change variable",addLegend=TRUE,...){
+
+  # probCI
+  probCI = QUALYPSOOUT$listOption$probCI
+
+  # future predictor values
+  Xfut = QUALYPSOOUT$Xfut
+  nFut = length(Xfut)
+
+  # phiStar
+  phiStar = QUALYPSOOUT$CLIMATEESPONSE$phiStar
+
+  # compute a multiplicative factor SDtot/SD(phi*) to match the standard deviation
+  # obtained from QUALYPSO
+  sd.qua = sqrt(QUALYPSOOUT$TOTALVAR-QUALYPSOOUT$INTERNALVAR)
+  sd.emp = apply(phiStar,2,sd)
+  sd.emp[sd.emp==0] = 1 # avoid NaN for the reference year
+  sd.corr = sd.qua/sd.emp
+  phiStar.corr = phiStar*t(replicate(nrow(phiStar),sd.corr))
+
+  # mean prediction
+  meanPred = QUALYPSOOUT$GRANDMEAN$MEAN
+
+  # variance decomposition without the internal var.
+  Vbind = cbind(QUALYPSOOUT$EFFECTVAR,QUALYPSOOUT$RESIDUALVAR$MEAN)
+  Vtot = Rfast::rowsums(Vbind)
+  DECOMPVAR = Vbind/replicate(n = ncol(Vbind), Vtot)
+  vNorm = t(DECOMPVAR)
+  nEff = nrow(vNorm)-1
+  vNormRev = apply(vNorm,2,rev)
+
+  # compute the lower bound if the distribution is gaussian
+  binf = apply(phiStar.corr,2,quantile,probs = (1-probCI)/2)
+  bsup = apply(phiStar.corr,2,quantile,probs = 0.5+probCI/2)
+
+  # obtain limits of the intervals, proportion corresponds to the part of the variance, lower and upper than the mean
+  limIntInf = limIntSup = matrix(nrow=nEff+1,ncol=nFut)
+  limIntInf[1,] = binf
+  limIntSup[1,] = bsup
+  for(i in 1:nEff){
+    limIntInf[i+1,] = limIntInf[i,]+vNormRev[i,]*(meanPred-binf)
+    limIntSup[i+1,] = limIntSup[i,]-vNormRev[i,]*(bsup-meanPred)
+  }
+
+  # figure
+  if(is.null(col)){
+    default.col = c("yellow","cadetblue1","blue1","darkgreen","darkgoldenrod4","darkorchid1")
+    col = default.col[1:(nEff+1)]
+  }
+
+  # figure
+  if(is.null(ylim)) ylim = c(min(binf),max(bsup))
+  plot(-1,-1,xlim=range(Xfut),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
+  for(i in 1:(nEff+1)){
+    polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
+  }
+  lines(Xfut,meanPred,col="white",lwd=1)
+
+  # add horizontal lines
+  abline(h=axTicks(side=2),col="black",lwd=0.3,lty=1)
+
+  # legend
+  if(addLegend){
+    namesEff = QUALYPSOOUT$names
+    legend('topleft',bty='n',cex=1.1, fill=rev(col), legend=c(namesEff,'Res. Var.'))
   }
 }
