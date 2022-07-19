@@ -129,7 +129,7 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
 
   # prepare outputs
   phiStar = phi = matrix(nrow=nS,ncol=nFut)
-  etaStar = matrix(nrow=nS,ncol=nY)
+  etaStar = YStar = matrix(nrow=nS,ncol=nY)
   climateResponse = list()
 
   for(iS in 1:nS){
@@ -162,10 +162,12 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
       # Eq. 5
       phiStar[iS,] = phiS-phiC
       etaStar[iS,] = Ys-phiY
+      YStar[iS,] = Ys-phiC
     }else if(typeChangeVariable=='rel'){
       # Eq. 6
       phiStar[iS,] = phiS/phiC-1
       etaStar[iS,] = (Ys-phiY)/phiC
+      YStar[iS,] = (Ys-phiC)/phiC
     }else{
       stop("fit.climate.response: argument type.change.var must be equal to 'abs' (absolute changes) or 'rel' (relative changes)")
     }
@@ -174,10 +176,11 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
   # Variance related to the internal variability: considered constant over the time period
   # (see Eq. 22 and 23 in Hingray and Said, 2014). We use a direct empirical estimate
   # of the variance of eta for each simulation chain and take the mean, see Eq. 19
-  varInterVariability = mean(apply(etaStar,2,var),na.rm=T)
+  varInterVariability = mean(apply(etaStar,2,var,na.rm=T),na.rm=T)
 
   # return objects
-  return(list(phiStar=phiStar,etaStar=etaStar,phi=phi,climateResponse=climateResponse,varInterVariability=varInterVariability))
+  return(list(phiStar=phiStar,etaStar=etaStar,YStar=YStar,phi=phi,
+              climateResponse=climateResponse,varInterVariability=varInterVariability))
 }
 
 
@@ -1001,7 +1004,8 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item \strong{CLIMATEESPONSE}: list of climate change responses and
 #'  corresponding internal variability. Contains \code{phiStar} (climate change
 #'  responses), \code{etaStar} (deviation from the climate change responses as
-#'  a result of internal variability), and \code{phi} (fitted climate responses).
+#'  a result of internal variability), , \code{Ystar} (change variable from the
+#'  projections),and \code{phi} (fitted climate responses).
 #'   \item \strong{GRANDMEAN}: List of estimates for the grand mean:
 #'   \itemize{
 #'      \item \strong{MEAN}: vector of length \code{n} of means.
@@ -1342,6 +1346,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     # extract quantities from these fits
     phiStar = climResponse$phiStar
     etaStar = climResponse$etaStar
+    YStar = climResponse$YStar
     phi = climResponse$phi
 
     # internal variability
@@ -1354,7 +1359,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     if(is.null(listOption$climResponse)){
       # initialise outputs
       phiStar = phi = array(dim=c(nG,nS,length(Xfut)))
-      etaStar = array(dim=d)
+      etaStar = YStar = array(dim=d)
       varInterVariability = vector(length=nG)
 
       # parallelize if required
@@ -1376,6 +1381,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
             # extract quantities from these fits
             phiStar[g,,] = climResponse$phiStar
             etaStar[g,,] = climResponse$etaStar
+            YStar[g,,] = climResponse$YStar
             phi[g,,] = climResponse$phi
             varInterVariability[g] = climResponse$varInterVariability
           }
@@ -1498,7 +1504,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
 
   #############################################
   # return results
-  return(list(CLIMATEESPONSE=list(phiStar=phiStar,etaStar=etaStar,phi=phi),
+  return(list(CLIMATEESPONSE=list(phiStar=phiStar,etaStar=etaStar,YStar=YStar,phi=phi),
               GRANDMEAN=anova$GRANDMEAN,
               MAINEFFECT=anova$MAINEFFECT,
               CHANGEBYEFFECT=anova$CHANGEBYEFFECT,
@@ -1977,6 +1983,9 @@ plotQUALYPSOMeanChangeAndUncertaintiesBetatest = function(QUALYPSOOUT,col=NULL,y
   # phiStar
   phiStar = QUALYPSOOUT$CLIMATEESPONSE$phiStar
 
+  # Ystar: change variable from the projection (Y(t)-phi(c))
+  YStar = QUALYPSOOUT$CLIMATEESPONSE$YStar
+
   # compute a multiplicative factor SDtot/SD(phi*) to match the standard deviation
   # obtained from QUALYPSO
   sd.qua = sqrt(QUALYPSOOUT$TOTALVAR-QUALYPSOOUT$INTERNALVAR)
@@ -2015,12 +2024,22 @@ plotQUALYPSOMeanChangeAndUncertaintiesBetatest = function(QUALYPSOOUT,col=NULL,y
     col = default.col[1:(nEff+1)]
   }
 
-  # figure
-  if(is.null(ylim)) ylim = c(min(binf),max(bsup))
+  # start figure
+  if(is.null(ylim)) ylim = range(YStar,na.rm=T)
   plot(-1,-1,xlim=range(Xfut),ylim=ylim,xlab=xlab,ylab=ylab,xaxs="i",yaxs="i",las=1,...)
+
+  # add raw climate change projections
+  Xmat = QUALYPSOOUT$Xmat
+  for(iS in 1:nrow(YStar)){
+    lines(Xmat[iS,],YStar[iS,],lwd=0.5,col="gray")
+  }
+
+  # add intervals
   for(i in 1:(nEff+1)){
     polygon(c(Xfut,rev(Xfut)),c(limIntInf[i,],rev(limIntSup[i,])),col=col[i],lty=1)
   }
+
+  # mean climate change response
   lines(Xfut,meanPred,col="white",lwd=1)
 
   # add horizontal lines

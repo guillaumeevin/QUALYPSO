@@ -71,7 +71,8 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
   \item \strong{CLIMATEESPONSE}: list of climate change responses and
  corresponding internal variability. Contains \code{phiStar} (climate change
  responses), \code{etaStar} (deviation from the climate change responses as
- a result of internal variability), and \code{phi} (fitted climate responses).
+ a result of internal variability), , \code{Ystar} (change variable from the
+ projections),and \code{phi} (fitted climate responses).
   \item \strong{GRANDMEAN}: List of estimates for the grand mean:
   \itemize{
      \item \strong{MEAN}: vector of length \code{n} of means.
