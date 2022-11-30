@@ -1254,10 +1254,17 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
       Xmat = matrix(rep(X,nS),byrow=T,nrow=nS,ncol=nY)
     }
   }else if(is.matrix(X)){
-    if(any(dim(X)!=dim(Y))){
-      stop('if X is provided as a matrix, its size must match the size of Y')
-    }else{
-      Xmat = X
+    Xmat = X
+    if(length(dim(Y))==2){
+      if(any(dim(X)!=dim(Y))){
+        stop('if X is provided as a matrix and Y as a grid, its size must match the size of Y')
+      }
+    }else if(length(dim(Y))==3){
+      if(any(dim(X)!=dim(Y)[c(2,3)])){
+        stop('if X is provided as a matrix, its first dimension must match the second
+             dimension of Y (number of scenarios) and and its second dimension must match
+             the third dimension of Y (number of future predictions)')
+      }
     }
   }else{
     stop('X must be NULL, a vector or a matrix')
@@ -1413,6 +1420,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
       }
     }else{
       climResponse = listOption$climResponse
+      YStar = climResponse$YStar
       phiStar = climResponse$phiStar
       etaStar = climResponse$etaStar
       phi = climResponse$phi
@@ -1971,7 +1979,7 @@ plotQUALYPSOMeanChangeAndUncertainties = function(QUALYPSOOUT,col=NULL,ylim=NULL
 #'
 #' @author Guillaume Evin
 plotQUALYPSOMeanChangeAndUncertaintiesBetatest = function(QUALYPSOOUT,col=NULL,ylim=NULL,
-                                                  xlab="",ylab="Change variable",addLegend=TRUE,...){
+                                                          xlab="",ylab="Change variable",addLegend=TRUE,...){
 
   # probCI
   probCI = QUALYPSOOUT$listOption$probCI
