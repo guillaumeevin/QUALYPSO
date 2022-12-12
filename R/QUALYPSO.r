@@ -92,7 +92,6 @@ get.Qmat = function(p){
 #' @param Y matrix of simulation chains: \code{nS} x \code{nY}
 #' @param spar smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
 #' @param Xmat matrix of predictors corresponding to the projections, e.g. time or global temperature.
-#' @param Xref reference/control value of the predictor (e.g. the reference period).
 #' @param Xfut values of the predictor over which the ANOVA will be applied.
 #' @param typeChangeVariable type of change variable: "abs" (absolute, value by default) or "rel" (relative)
 #'
@@ -116,7 +115,7 @@ get.Qmat = function(p){
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 #' Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
-fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
+fit.climate.response = function(Y, spar, Xmat, Xfut, typeChangeVariable){
 
   # number of simulation chains
   nS = nrow(Y)
@@ -127,6 +126,12 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
   # number of future time/global.tas
   nFut = length(Xfut)
 
+  # Xref is the reference value for X used to compute absolute or relative changes
+  # usually indicating the reference (control) period of the current climate
+  # For simplicity, we consider that it is the first Xfut value (i.e. first year
+  # in Xfut or minimum global temperature)
+  Xref = Xfut[1]
+
   # prepare outputs
   phiStar = phi = matrix(nrow=nS,ncol=nFut)
   etaStar = YStar = matrix(nrow=nS,ncol=nY)
@@ -136,7 +141,6 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
     # projection for this simulation chain
     Ys = Y[iS,]
     Xs = Xmat[iS,]
-    Xrefs = Xref[iS]
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
@@ -152,7 +156,7 @@ fit.climate.response = function(Y, spar, Xmat, Xref, Xfut, typeChangeVariable){
     phiS = predict(smooth.spline.out, Xfut)$y
 
     # climate response of the reference/control time/global tas
-    phiC = predict(smooth.spline.out, Xrefs)$y
+    phiC = predict(smooth.spline.out, Xref)$y
 
     # store climate response for this simulation chain
     phi[iS,] = phiS
@@ -963,9 +967,6 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100}) or
 #' a matrix of the same size as Y if these predictors are different for the scenarios. By default,
 #' a vector \code{1:nY} is created.
-#' @param Xref (optional) reference/control value of the predictor (e.g. the reference period).
-#' \code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
-#'  for each climate projection. By default, \code{Xref} is taken as the minimum value of X.
 #' @param Xfut (optional) \code{nF} values of the predictor over which the ANOVA will be applied. It must be
 #' a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 #' \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
@@ -1004,7 +1005,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item \strong{CLIMATEESPONSE}: list of climate change responses and
 #'  corresponding internal variability. Contains \code{phiStar} (climate change
 #'  responses), \code{etaStar} (deviation from the climate change responses as
-#'  a result of internal variability), , \code{Ystar} (change variable from the
+#'  a result of internal variability), \code{Ystar} (change variable from the
 #'  projections),and \code{phi} (fitted climate responses).
 #'   \item \strong{GRANDMEAN}: List of estimates for the grand mean:
 #'   \itemize{
@@ -1071,7 +1072,6 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'   \item \strong{DECOMPVAR}: Decomposition of the total variability for each component
 #'   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
 #'   \item \strong{Xmat}: matrix of predictors
-#'   \item \strong{Xref}: reference predictor values
 #'   \item \strong{Xfut}: future predictor values
 #'   \item \strong{paralType}: type of parallelisation (Time or Grid)
 #'   \item \strong{namesEff}: names of the main effects
@@ -1159,7 +1159,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' listOption = list(typeChangeVariable='abs')
 #'
 #' # call QUALYPSO
-#' QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,Xref=1999,
+#' QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
 #'                          Xfut=Xfut_time,listOption=listOption)
 #'
 #' # grand mean effect
@@ -1185,7 +1185,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' listOption = list(typeChangeVariable='abs')
 #'
 #' # call QUALYPSO
-#' QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,Xref=13,
+#' QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
 #'                               Xfut=Xfut_globaltas,listOption=listOption)
 #'
 #' # grand mean effect
@@ -1210,7 +1210,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' @export
 #'
 #' @author Guillaume Evin
-QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
+QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
   ######### Check inputs and assign default values ##########
 
   ######## Check list of options ########
@@ -1270,21 +1270,6 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     stop('X must be NULL, a vector or a matrix')
   }
 
-  # Xref is the reference value for X used to compute absolute or relative changes
-  # usually indicating the reference (control) period of the current climate
-  if(is.null(Xref)){
-    Xref=rep(min(Xmat),nS)
-  }else{
-    # if Xref is provided, we check that is a single value within the values of X
-    if(!any(length(Xref)==c(1,nS))|!is.numeric(Xref)){
-      stop('Xref must be a single numeric value or a vector of length nS')
-    }
-
-    # recycle Xref if it is a single value
-    if(length(Xref)==1){
-      Xref = rep(Xref,nS)
-    }
-  }
 
   # Xfut are the values for X used to compute absolute or relative changes
   # usually indicating the future periods. When a grid is provided for Y, it must
@@ -1299,13 +1284,14 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     }else if(is.matrix(X)){
       Xfut = seq(from=min(X),to=max(X),length.out=10)
     }
-  }else if(!is.vector(Xfut)|!is.numeric(Xfut)){
-    stop('Xfut must be a vector')
+  }else if(!(is.vector(Xfut)&is.numeric(Xfut))){
+    stop('Xfut must be a vector of numerical values')
   }else if(length(Xfut)==1){
     stop('Xfut must be a vector with a length greater than 1')
   }else if(min(Xfut)<min(Xmat)|max(Xfut)>max(Xmat)){
     stop('Xfut must be within the range of X')
   }
+
 
   if(paralType == 'Grid'){
     # if Y is an array, iFut must be provided (we provide the ANOVA decomposition
@@ -1344,7 +1330,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
     if(is.null(listOption$climResponse)){
       climResponse = fit.climate.response(Y,
                                           spar=listOption$spar,
-                                          Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                          Xmat=Xmat, Xfut=Xfut,
                                           typeChangeVariable=listOption$typeChangeVariable)
     }else{
       climResponse = listOption$climResponse
@@ -1382,7 +1368,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
           }else{
             climResponse = fit.climate.response(Y[g,,],
                                                 spar=listOption$spar,
-                                                Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                                Xmat=Xmat, Xfut=Xfut,
                                                 typeChangeVariable=listOption$typeChangeVariable)
 
             # extract quantities from these fits
@@ -1404,7 +1390,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
           }else{
             climResponse.g = fit.climate.response(Y[g,,],
                                                   spar=listOption$spar,
-                                                  Xmat=Xmat, Xref=Xref, Xfut=Xfut,
+                                                  Xmat=Xmat, Xfut=Xfut,
                                                   typeChangeVariable=listOption$typeChangeVariable)
           }
           return(climResponse.g)
@@ -1523,7 +1509,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xref=NULL,Xfut=NULL,iFut=NULL,listOption=
               TOTALVAR=TOTALVAR,
               DECOMPVAR=DECOMPVAR,
               RESERR=RESERR,
-              Xmat=Xmat,Xref=Xref,Xfut=Xfut,
+              Xmat=Xmat,Xfut=Xfut,
               paralType=paralType,namesEff=namesEff,
               Y=Y,listOption=anova$listOption,
               listScenarioInput=anova$listScenarioInput))

@@ -4,15 +4,7 @@
 \alias{QUALYPSO}
 \title{QUALYPSO}
 \usage{
-QUALYPSO(
-  Y,
-  scenAvail,
-  X = NULL,
-  Xref = NULL,
-  Xfut = NULL,
-  iFut = NULL,
-  listOption = NULL
-)
+QUALYPSO(Y, scenAvail, X = NULL, Xfut = NULL, iFut = NULL, listOption = NULL)
 }
 \arguments{
 \item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.}
@@ -25,10 +17,6 @@ QUALYPSO(
 It can be a vector if the predictor is the same for all scenarios (e.g. \code{X=2001:2100}) or
 a matrix of the same size as Y if these predictors are different for the scenarios. By default,
 a vector \code{1:nY} is created.}
-
-\item{Xref}{(optional) reference/control value of the predictor (e.g. the reference period).
-\code{Xref} can be a single value or a vector of length \code{nS} if \code{Xref} is different
- for each climate projection. By default, \code{Xref} is taken as the minimum value of X.}
 
 \item{Xfut}{(optional) \code{nF} values of the predictor over which the ANOVA will be applied. It must be
 a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
@@ -71,7 +59,7 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
   \item \strong{CLIMATEESPONSE}: list of climate change responses and
  corresponding internal variability. Contains \code{phiStar} (climate change
  responses), \code{etaStar} (deviation from the climate change responses as
- a result of internal variability), , \code{Ystar} (change variable from the
+ a result of internal variability), \code{Ystar} (change variable from the
  projections),and \code{phi} (fitted climate responses).
   \item \strong{GRANDMEAN}: List of estimates for the grand mean:
   \itemize{
@@ -138,7 +126,6 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
   \item \strong{DECOMPVAR}: Decomposition of the total variability for each component
   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
   \item \strong{Xmat}: matrix of predictors
-  \item \strong{Xref}: reference predictor values
   \item \strong{Xfut}: future predictor values
   \item \strong{paralType}: type of parallelisation (Time or Grid)
   \item \strong{namesEff}: names of the main effects
@@ -229,7 +216,7 @@ plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.synth,xlab="Years")
 listOption = list(typeChangeVariable='abs')
 
 # call QUALYPSO
-QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,Xref=1999,
+QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
                          Xfut=Xfut_time,listOption=listOption)
 
 # grand mean effect
@@ -255,7 +242,7 @@ plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
 listOption = list(typeChangeVariable='abs')
 
 # call QUALYPSO
-QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,Xref=13,
+QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
                               Xfut=Xfut_globaltas,listOption=listOption)
 
 # grand mean effect

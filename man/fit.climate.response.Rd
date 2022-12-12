@@ -4,7 +4,7 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, spar, Xmat, Xref, Xfut, typeChangeVariable)
+fit.climate.response(Y, spar, Xmat, Xfut, typeChangeVariable)
 }
 \arguments{
 \item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
@@ -12,8 +12,6 @@ fit.climate.response(Y, spar, Xmat, Xref, Xfut, typeChangeVariable)
 \item{spar}{smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]}
 
 \item{Xmat}{matrix of predictors corresponding to the projections, e.g. time or global temperature.}
-
-\item{Xref}{reference/control value of the predictor (e.g. the reference period).}
 
 \item{Xfut}{values of the predictor over which the ANOVA will be applied.}
 
