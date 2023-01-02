@@ -1189,19 +1189,19 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #'                               Xfut=Xfut_globaltas,listOption=listOption)
 #'
 #' # grand mean effect
-#' plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+#' plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 #'
 #' # main GCM effects
-#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global temperature (Celsius)")
+#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global warming (Celsius)")
 #'
 #' # main RCM effects
-#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global temperature (Celsius)")
+#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global warming (Celsius)")
 #'
 #' # mean change and associated uncertainties
-#' plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+#' plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 #'
 #' # variance decomposition
-#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
@@ -1530,21 +1530,41 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="",
-                                       ylab="Climate response",...){
+plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",...){
   # vector of predictors
   Xfut = QUALYPSOOUT$Xfut
 
   # retrieve mean
   phi = QUALYPSOOUT$CLIMATEESPONSE$phi
 
+  # list of scenarios
+  scenAvail = QUALYPSOOUT$listScenarioInput$scenAvail
 
-  # initiate plot
-  if(is.null(lim)) lim = range(phi)
-  plot(-100,-100,xlim=range(Xfut),ylim=c(lim[1],lim[2]),xlab=xlab,ylab=ylab,...)
+  # Xmat and Y arguments
+  Xmat = QUALYPSOOUT$Xmat
+  Y = QUALYPSOOUT$Y
 
-  for(i in 1:nrow(phi)){
-    lines(Xfut,phi[i,],lwd=3,col=i)
+  # number of scenarios
+  nS = nrow(Y)
+
+  for(iS in 1:nS){
+    Ys = Y[iS,]
+    Xs = Xmat[iS,]
+    phis = phi[iS,]
+
+    plot(-1, -1, xlim = range(c(Xs,Xfut)), ylim = range(c(Ys,phis)),
+         main=paste0(scenAvail[iS,],collapse = " / "),
+         xlab = xlab, ylab = ylab, ...)
+
+    # add lines of raw projection and climate projection
+    lines(Xs, Ys, lwd = 1)
+    lines(Xfut, phis, lwd = 3)
+
+    # add legend
+    legend("topleft",legend = c("Raw projection", "Climate response"),
+           lty=1,lwd=c(1,3),bty="n")
+
+    readline(prompt = "Press Enter")
   }
 }
 

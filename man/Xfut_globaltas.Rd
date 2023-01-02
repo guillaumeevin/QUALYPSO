@@ -3,8 +3,7 @@
 \docType{data}
 \name{Xfut_globaltas}
 \alias{Xfut_globaltas}
-\title{Equally spaced vector of simulated global temperatures over the period
-1971-2099 for the RCP8.5}
+\title{Vector of of future warming levels}
 \format{
 vector of length 13
 }
@@ -12,8 +11,7 @@ vector of length 13
 data(Xfut_globaltas)
 }
 \description{
-Equally spaced vector of simulated global temperatures over the period
-1971-2099 for the RCP8.5
+Equally spaced vector of of future warming levels
 }
 \author{
 Guillaume Evin \email{guillaume.evin@inrae.fr}

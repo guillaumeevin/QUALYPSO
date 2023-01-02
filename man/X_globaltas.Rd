@@ -3,8 +3,7 @@
 \docType{data}
 \name{X_globaltas}
 \alias{X_globaltas}
-\title{Annual average of global temperatures simulated by different CMIP5 GCMs at
-the planetary scale for the period 1971-2099}
+\title{Annual warming levels simulated by different CMIP5 GCMs}
 \format{
 matrix 20 scenarios x 129 years
 }
@@ -12,8 +11,27 @@ matrix 20 scenarios x 129 years
 data(X_globaltas)
 }
 \description{
-Annual average of global temperatures simulated by different CMIP5 GCMs at
-the planetary scale for the period 1971-2099
+Annual warming levels at the planetary scales simulated by different CMIP5
+GCMs for the period 1971-2099. Warming levels are obtained with respect to
+the year 1860 (common starting year of the CMIP5 simulations). These warming
+levels have been obtained with the following steps:
+\enumerate{
+\item Annual tas averages simulated by different CMIP5 have first been smoothed
+using a smoothing spline. Let us denote these smoothed values by
+tas_GCM(y) for a year y.
+\item Large discrepancies can be observed for tas_GCM_smooth(y) even in the past
+due to large first-order biases in the GCM simulations. In order to obtain a
+common reference, we also consider observed tas estimates at the global scale.
+HadCRUT5 (Morice et al., 2021, 10.1029/2019JD032361) provides anomalies with
+respect to the period 1961-1990. An estimate of absolute average temperature
+for this period is 14°C (Jones et al., 1999, 10.1029/1999RG900002). Smoothed
+estimates of absolute tas averages are obtained using a smoothing spline and
+is denoted by tas_obs(y).
+\item Warming levels are obtained as anomalies with respect to the period 1860
+and considering a reference year, here 1990, where the warming levels WL are
+in agreement:
+WL(y) = tas_GCM(y)-tas_GCM(1990)+tas_obs(1990)-tas_obs(1860)
+}
 }
 \author{
 Guillaume Evin \email{guillaume.evin@inrae.fr}

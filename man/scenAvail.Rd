@@ -3,8 +3,7 @@
 \docType{data}
 \name{scenAvail}
 \alias{scenAvail}
-\title{scenAvail gives the GCM and RCM which have been used for the 20 climate
-projections}
+\title{List of GCM and RCM which have been used for the 20 climate projections}
 \format{
 data.frame with 20 rows and two columns: GCM and RCM
 }
@@ -13,7 +12,7 @@ data(scenAvail)
 }
 \description{
 scenAvail gives the GCM and RCM which have been used for the 20 climate
-projections
+projections (obtained with the RCP8.5)
 }
 \author{
 Guillaume Evin \email{guillaume.evin@inrae.fr}

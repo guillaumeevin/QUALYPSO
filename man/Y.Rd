@@ -3,8 +3,7 @@
 \docType{data}
 \name{Y}
 \alias{Y}
-\title{climate projections of mean winter (DJF) temperature over the SREX region CEU
-simulated by 20 combinations of CMIP5 GCMs and RCMs for the period 1971-2099}
+\title{Mean winter temperature over CEU with 20 GCM/RCM combinations for 1971-2099}
 \format{
 matrix 20 scenarios x 129 years
 }

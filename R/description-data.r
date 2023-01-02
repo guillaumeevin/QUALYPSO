@@ -1,5 +1,26 @@
-#' Annual average of global temperatures simulated by different CMIP5 GCMs at
-#' the planetary scale for the period 1971-2099
+#' Annual warming levels simulated by different CMIP5 GCMs
+#'
+#' Annual warming levels at the planetary scales simulated by different CMIP5
+#' GCMs for the period 1971-2099. Warming levels are obtained with respect to
+#' the year 1860 (common starting year of the CMIP5 simulations). These warming
+#' levels have been obtained with the following steps:
+#' \enumerate{
+#' \item Annual tas averages simulated by different CMIP5 have first been smoothed
+#' using a smoothing spline. Let us denote these smoothed values by
+#' tas_GCM(y) for a year y.
+#' \item Large discrepancies can be observed for tas_GCM_smooth(y) even in the past
+#' due to large first-order biases in the GCM simulations. In order to obtain a
+#' common reference, we also consider observed tas estimates at the global scale.
+#' HadCRUT5 (Morice et al., 2021, 10.1029/2019JD032361) provides anomalies with
+#' respect to the period 1961-1990. An estimate of absolute average temperature
+#' for this period is 14°C (Jones et al., 1999, 10.1029/1999RG900002). Smoothed
+#' estimates of absolute tas averages are obtained using a smoothing spline and
+#' is denoted by tas_obs(y).
+#' \item Warming levels are obtained as anomalies with respect to the period 1860
+#' and considering a reference year, here 1990, where the warming levels WL are
+#' in agreement:
+#' WL(y) = tas_GCM(y)-tas_GCM(1990)+tas_obs(1990)-tas_obs(1860)
+#' }
 #'
 #' @name X_globaltas
 #' @docType data
@@ -10,8 +31,9 @@
 "X_globaltas"
 
 
-#' Equally spaced vector of simulated global temperatures over the period
-#' 1971-2099 for the RCP8.5
+#' Vector of of future warming levels
+#'
+#' Equally spaced vector of of future warming levels
 #'
 #' @name Xfut_globaltas
 #' @docType data
@@ -55,8 +77,10 @@
 "Xfut_time"
 
 
+#' List of GCM and RCM which have been used for the 20 climate projections
+#'
 #' scenAvail gives the GCM and RCM which have been used for the 20 climate
-#' projections
+#' projections (obtained with the RCP8.5)
 #'
 #' @name scenAvail
 #' @docType data
@@ -67,6 +91,8 @@
 "scenAvail"
 
 
+#' Mean winter temperature over CEU with 20 GCM/RCM combinations for 1971-2099
+#'
 #' climate projections of mean winter (DJF) temperature over the SREX region CEU
 #' simulated by 20 combinations of CMIP5 GCMs and RCMs for the period 1971-2099
 #'
