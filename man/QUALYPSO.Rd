@@ -25,11 +25,15 @@ maximum values of X if X is a matrix.}
 
 \item{iFut}{index in \code{1:nF} corresponding to a future predictor value . This index is
 necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
-Indeed, in this case, we run QUALYPSO only for one future predictor.}
+Indeed, in this case, we run QUALYPSO only for one future predictor. The first value defines the reference
+period or warming level.}
 
 \item{listOption}{(optional) list of options
 \itemize{
-  \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1].
+   \item \strong{args.smooth.spline}: list of arguments to be passed to
+   \code{\link[stats]{smooth.spline}}. The \code{names} attribute of
+   \code{args.smooth.spline} gives the argument names (see \code{\link[base]{do.call}}).
+   The default option runs \code{smooth.spline} with \code{spar}=1.
   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative).
   \item \strong{ANOVAmethod}: ANOVA method: "QUALYPSO" applies the method described in Evin et al. (2020),
   "lm" applies a simple linear model to estimate the main effects.
@@ -246,19 +250,19 @@ QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
                               Xfut=Xfut_globaltas,listOption=listOption)
 
 # grand mean effect
-plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 
 # main GCM effects
-plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global temperature (Celsius)")
+plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global warming (Celsius)")
 
 # main RCM effects
-plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global temperature (Celsius)")
+plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global warming (Celsius)")
 
 # mean change and associated uncertainties
-plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+plotQUALYPSOMeanChangeAndUncertainties(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 
 # variance decomposition
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global temperature (Celsius)")
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
 
 }
 \references{

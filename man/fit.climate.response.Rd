@@ -4,12 +4,14 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, spar, Xmat, Xfut, typeChangeVariable)
+fit.climate.response(Y, args.smooth.spline, Xmat, Xfut, typeChangeVariable)
 }
 \arguments{
 \item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
 
-\item{spar}{smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]}
+\item{args.smooth.spline}{list of arguments to be passed to \code{\link[stats]{smooth.spline}}.
+The \code{names} attribute of \code{args.smooth.spline} gives the argument
+names (see \code{\link[base]{do.call}}).}
 
 \item{Xmat}{matrix of predictors corresponding to the projections, e.g. time or global temperature.}
 

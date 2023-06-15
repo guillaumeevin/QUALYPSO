@@ -7,8 +7,8 @@
 plotQUALYPSOclimateResponse(
   QUALYPSOOUT,
   lim = NULL,
-  xlab = "",
-  ylab = "Climate response",
+  xlab = "X",
+  ylab = "Y",
   ...
 )
 }

@@ -90,7 +90,9 @@ get.Qmat = function(p){
 #' of \code{nY} time steps (e.g. number of years).
 #'
 #' @param Y matrix of simulation chains: \code{nS} x \code{nY}
-#' @param spar smoothing parameter \code{spar} in \code{\link[stats]{smooth.spline}}: varies in [0,1]
+#' @param args.smooth.spline list of arguments to be passed to \code{\link[stats]{smooth.spline}}.
+#' The \code{names} attribute of \code{args.smooth.spline} gives the argument
+#' names (see \code{\link[base]{do.call}}).
 #' @param Xmat matrix of predictors corresponding to the projections, e.g. time or global temperature.
 #' @param Xfut values of the predictor over which the ANOVA will be applied.
 #' @param typeChangeVariable type of change variable: "abs" (absolute, value by default) or "rel" (relative)
@@ -115,7 +117,7 @@ get.Qmat = function(p){
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 #' Journal of Climate. J. Climate, 32, 2423–2440. <doi:10.1175/JCLI-D-18-0606.1>.
-fit.climate.response = function(Y, spar, Xmat, Xfut, typeChangeVariable){
+fit.climate.response = function(Y, args.smooth.spline, Xmat, Xfut, typeChangeVariable){
 
   # number of simulation chains
   nS = nrow(Y)
@@ -144,7 +146,8 @@ fit.climate.response = function(Y, spar, Xmat, Xfut, typeChangeVariable){
 
     # fit a smooth signal (smooth cubic splines)
     zz = !is.na(Ys)
-    smooth.spline.out<-stats::smooth.spline(Xs[zz],Ys[zz],spar=spar)
+    smooth.spline.out<-do.call(what = stats::smooth.spline,
+                               args=c(list(x=Xs[zz],y=Ys[zz]),args.smooth.spline))
 
     # store spline object
     climateResponse[[iS]] = smooth.spline.out
@@ -421,12 +424,11 @@ QUALYPSO.check.option = function(listOption){
     listOption = list()
   }
 
-  # spar
-  if('spar' %in% names(listOption)){
-    spar = listOption[['spar']]
-    if(!(is.numeric(spar)&(spar>0&spar<=10))) stop('spar must be in ]0,10]')
+  # args.smooth.spline
+  if('args.smooth.spline' %in% names(listOption)){
+    args.smooth.spline = listOption[['args.smooth.spline']]
   }else{
-    listOption[['spar']] = 1
+    listOption[['args.smooth.spline']] = list(spar=1)
   }
 
   # ANOVAmethod
@@ -973,10 +975,14 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' maximum values of X if X is a matrix.
 #' @param iFut index in \code{1:nF} corresponding to a future predictor value . This index is
 #' necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
-#' Indeed, in this case, we run QUALYPSO only for one future predictor.
+#' Indeed, in this case, we run QUALYPSO only for one future predictor. The first value defines the reference
+#' period or warming level.
 #' @param listOption (optional) list of options
 #' \itemize{
-#'   \item \strong{spar}: smoothing parameter \code{spar} in \link[stats]{smooth.spline}: typically (but not necessarily) in (0,1].
+#'    \item \strong{args.smooth.spline}: list of arguments to be passed to
+#'    \code{\link[stats]{smooth.spline}}. The \code{names} attribute of
+#'    \code{args.smooth.spline} gives the argument names (see \code{\link[base]{do.call}}).
+#'    The default option runs \code{smooth.spline} with \code{spar}=1.
 #'   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative).
 #'   \item \strong{ANOVAmethod}: ANOVA method: "QUALYPSO" applies the method described in Evin et al. (2020),
 #'   "lm" applies a simple linear model to estimate the main effects.
@@ -1329,7 +1335,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
   if(paralType == 'Time'){
     if(is.null(listOption$climResponse)){
       climResponse = fit.climate.response(Y,
-                                          spar=listOption$spar,
+                                          args.smooth.spline=listOption$args.smooth.spline,
                                           Xmat=Xmat, Xfut=Xfut,
                                           typeChangeVariable=listOption$typeChangeVariable)
     }else{
@@ -1367,7 +1373,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
             varInterVariability[g] = NA
           }else{
             climResponse = fit.climate.response(Y[g,,],
-                                                spar=listOption$spar,
+                                                args.smooth.spline=listOption$args.smooth.spline,
                                                 Xmat=Xmat, Xfut=Xfut,
                                                 typeChangeVariable=listOption$typeChangeVariable)
 
@@ -1389,7 +1395,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,iFut=NULL,listOption=NULL){
                                   varInterVariability = NA)
           }else{
             climResponse.g = fit.climate.response(Y[g,,],
-                                                  spar=listOption$spar,
+                                                  args.smooth.spline=listOption$args.smooth.spline,
                                                   Xmat=Xmat, Xfut=Xfut,
                                                   typeChangeVariable=listOption$typeChangeVariable)
           }

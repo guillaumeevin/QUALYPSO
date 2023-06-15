@@ -1,6 +1,6 @@
 Package: QUALYPSO
 Type: Package
-Date: 2022-12-14
+Date: 2023-06-15
 License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
 Version: 2.1
@@ -13,5 +13,5 @@ Description: These functions use data augmentation and Bayesian techniques for t
 Depends: R (>= 2.10)
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 NeedsCompilation: no
