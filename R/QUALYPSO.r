@@ -326,7 +326,7 @@ QUALYPSO.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
       # number of factors for each type of effect (i.e. number of GCMs, RCMs)
       n = nTypeEff[i.eff]
       # marginal sums
-      mar.diff = Rfast::group.sum(X.shift,indexEffInCompScen[,i.eff])
+      mar.diff = Rfast::group(X.shift,indexEffInCompScen[,i.eff],method="sum")
       # arguments of full conditional posterior distribution
       V = as.numeric((1/s2)*(t(Qmat[[i.eff]]) %*% mar.diff))
       Psi = 1/(nComp/(s2*n)+1/s2eff)
