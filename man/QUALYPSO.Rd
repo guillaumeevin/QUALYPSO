@@ -42,16 +42,13 @@ period or warming level.}
   \item \strong{nKeep}: if \code{ANOVAmethod=="QUALYPSO"}, number of kept samples (default: 2000).
   If \code{nKeep} is too small, MCMC samples might not represent correctly the posterior
   distributions of inferred parameters.
-  \item \strong{nCluster}: number of clusters used for the parallelization (default: 1).
-  When \code{nCluster} is greater than one, parallelization is used to
-  apply \code{QUALYPSO} over multiple time steps or grid points simultaneously.
   \item \strong{probCI}: probability (in [0,1]) for the confidence intervals, \code{probCI = 0.9} by default.
   \item \strong{quantilePosterior}: vector of probabilities (in [0,1]) for which
   we compute the quantiles from the posterior distributions
    \code{quantilePosterior = c(0.005,0.025,0.05,0.1,0.25,0.33,0.5,0.66,0.75,0.9,0.95,0.975,0.995)} by default.
   \item \strong{climResponse}: NULL by default. If it is provided, it must correspond to the outputs
-  of \code{\link{fit.climate.response}}, i.e. a list with \code{phiStar} [nS x nF], \code{etaStar} [nS x nY],
-   \code{phi} [nS x nF] and \code{varInterVariability} [scalar] if \code{Y} is a matrix [nS x nY],
+  of \code{\link{fit.climate.response}}, i.e. a list with \code{YStar} [nS x nY], \code{phiStar} [nS x nF],
+  \code{etaStar} [nS x nY], \code{phi} [nS x nF] and \code{varInterVariability} [scalar] if \code{Y} is a matrix [nS x nY],
    or a list with \code{phiStar} [nG x nS x nF], \code{etaStar} [nG x nS x nY], \code{phi} [nG x nS x nF] and
     \code{varInterVariability} vector of length \code{nG} if \code{Y} is an array [nG x nS x nY].
 }}
@@ -60,7 +57,7 @@ period or warming level.}
 List providing the results for each of the \code{n} values of \code{Xfut}
 if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the following fields:
 \itemize{
-  \item \strong{CLIMATEESPONSE}: list of climate change responses and
+  \item \strong{CLIMATERESPONSE}: list of climate change responses and
  corresponding internal variability. Contains \code{phiStar} (climate change
  responses), \code{etaStar} (deviation from the climate change responses as
  a result of internal variability), \code{Ystar} (change variable from the

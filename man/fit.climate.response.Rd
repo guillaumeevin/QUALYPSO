@@ -22,6 +22,7 @@ names (see \code{\link[base]{do.call}}).}
 \value{
 list with the following fields for each simulation chain:
 \itemize{
+  \item \strong{YStar}: \code{nS x nY}, change variable
   \item \strong{phiStar}: \code{nS x nF}, climate change responses
   \item \strong{etaStar}: \code{nS x nY}, deviation from the climate change response
   due to the internal variability, for \code{Xmat}
