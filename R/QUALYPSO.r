@@ -1799,7 +1799,7 @@ plotQUALYPSOTotalVarianceByScenario = function(QUALYPSOOUT,nameEff,nameScenario,
   # concatenate variances
   Vbind = rbind(t(Veff),QUALYPSOOUT$RESIDUALVAR$MEAN,QUALYPSOOUT$INTERNALVAR)
   nEff = nrow(Vbind)-2
-  Vtot = colSums(Vbind)
+  Vtot = Rfast::colsums(Vbind)
   Vnorm = Vbind/t(replicate(n = nrow(Vbind), Vtot))
 
   # reverse
