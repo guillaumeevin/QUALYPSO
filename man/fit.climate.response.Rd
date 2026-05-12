@@ -4,14 +4,21 @@
 \alias{fit.climate.response}
 \title{fit.climate.response}
 \usage{
-fit.climate.response(Y, args.smooth.spline, Xmat, Xfut, typeChangeVariable)
+fit.climate.response(
+  Y,
+  typeClimateResponse,
+  parClimateResponse,
+  Xmat,
+  Xfut,
+  typeChangeVariable
+)
 }
 \arguments{
 \item{Y}{matrix of simulation chains: \code{nS} x \code{nY}}
 
-\item{args.smooth.spline}{list of arguments to be passed to \code{\link[stats]{smooth.spline}}.
-The \code{names} attribute of \code{args.smooth.spline} gives the argument
-names (see \code{\link[base]{do.call}}).}
+\item{typeClimateResponse}{type of climate response fitted to the projections.}
+
+\item{parClimateResponse}{parameter of the model applied for the extraction of the climate response.}
 
 \item{Xmat}{matrix of predictors corresponding to the projections, e.g. time or global temperature.}
 
@@ -27,7 +34,6 @@ list with the following fields for each simulation chain:
   \item \strong{etaStar}: \code{nS x nY}, deviation from the climate change response
   due to the internal variability, for \code{Xmat}
   \item \strong{phi}: \code{nS x nF}, raw trends obtained using \link[stats]{smooth.spline}
-  \item \strong{climateResponse}: output from \link[stats]{smooth.spline}
   \item \strong{varInterVariability}: scalar, internal variability component of the MME
 }
 }
