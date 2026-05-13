@@ -156,7 +156,13 @@ fit.climate.response = function(Y, typeClimateResponse, parClimateResponse, Xmat
       phiY = predict(smooth.spline.out, Xs)$y
       phiS = predict(smooth.spline.out, Xfut)$y
       phiC = predict(smooth.spline.out, Xref)$y
-    }else if(typeClimateResponse == "tweedy"){
+    }else if(typeClimateResponse == "tweedie"){
+      if(any(Ys < 0)){
+        stop("the tweedie distributions are designed for non-negative, right-skewed 
+        data with a mass at zero. They do not natively support negative input values 
+        for the response variable, as they are typically used for continuous positive data.
+        Please use other options for typeClimateResponse.")
+      }
       # Generalized Linear Model (GLM) with Tweedie distribution
       glm_out <- stats::glm(y ~ x, 
         family = statmod::tweedie(var.power = parClimateResponse, link.power = 0), 
