@@ -7,7 +7,7 @@
 checkTypeandDimension(Y, scenAvail, X)
 }
 \arguments{
-\item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.}
+\item{Y}{matrix \code{nS} x \code{nY}}
 
 \item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics

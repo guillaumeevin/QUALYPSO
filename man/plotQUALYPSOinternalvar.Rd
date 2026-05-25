@@ -24,7 +24,8 @@ plotQUALYPSOinternalvar(
 \item{...}{additional arguments to be passed to \code{\link[graphics]{plot}}}
 }
 \description{
-Plot the climate responses.
+Plot eta* as a function of X as well as eta* +/- 1.645*sqrt(INTERNALVAR),
+where INTERNALVAR is a function of Xfut.
 }
 \author{
 Guillaume Evin

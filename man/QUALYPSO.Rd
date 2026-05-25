@@ -4,10 +4,10 @@
 \alias{QUALYPSO}
 \title{QUALYPSO}
 \usage{
-QUALYPSO(Y, scenAvail, X = NULL, Xfut = NULL, iFut = NULL, listOption = NULL)
+QUALYPSO(Y, scenAvail, X = NULL, Xfut = NULL, listOption = NULL)
 }
 \arguments{
-\item{Y}{matrix \code{nS} x \code{nY} or array \code{nG} x \code{nS} x \code{nY} of climate projections.}
+\item{Y}{matrix \code{nS} x \code{nY} of climate projections.}
 
 \item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
@@ -21,12 +21,7 @@ a vector \code{1:nY} is created.}
 \item{Xfut}{(optional) \code{nF} values of the predictor over which the ANOVA will be applied. It must be
 a vector of values within the range of values of X. By default, it corresponds to X if X is a vector,
 \code{1:nY} if X is \code{NULL} or a vector of 10 values equally spaced between the minimum and
-maximum values of X if X is a matrix.}
-
-\item{iFut}{index in \code{1:nF} corresponding to a future predictor value . This index is
-necessary when \code{Y} is an array \code{nG} x \code{nS} x \code{nY} available for \code{nG} grid points.
-Indeed, in this case, we run QUALYPSO only for one future predictor. The first value defines the reference
-period or warming level.}
+maximum values of X if X is a matrix. The first value defines the reference period or warming level.}
 
 \item{listOption}{(optional) list of options
 \itemize{
@@ -35,16 +30,15 @@ period or warming level.}
 equivalent number of degrees of freedom, "poly" (polynomial model fitted with \code{\link[stats]{lm}})
 where the parameter \code{degree} is an integer indicating the degree of the polynomial (\code{\link[stats]{poly}}), 
 "lowess" (\code{\link[stats]{lowess}}) where the parameter \code{f} in (0,1) is the proportion of points which influence
-the smooth at each value, or "tweedie", a Generalized Linear Model with the Tweedie distribution where the parameter 
-\code{var.power} is the index of power variance function (positive value). The values 0, 1, 2 and 3 correspond to the
- normal distribution, the Poisson distribution, the gamma distribution and the inverse-Gaussian distribution respectively
-(\code{\link[statmod]{tweedie}}). The tweedie model is the only model that handles zeros in the climate projections.
-  \item \strong{parClimateResponse}: parameter of the model applied for the extraction of the climate response (i.e. df, degree,
-f, or var.power). Default values are \code{df=4}, \code{degree=1}, \code{f=0.4} or \code{var.power=1.5} for the smoothing spline, 
+the smooth at each value, or "tweedie" (\code{\link[statmod]{tweedie}}), a Generalized Linear Model with the Tweedie 
+distribution where the parameter \code{var.power} is the index of power variance function (positive value). The tweedie 
+model is the only model that handles zeros in the climate projections \code{var.power} is in (1,2).
+  \item \strong{parClimateResponse}: parameter of the model applied for the extraction of the climate response (i.e. \code{df}, \code{degree},
+\code{f}, or \code{var.power}). Default values are \code{df=4}, \code{degree=1}, \code{f=0.4} or \code{var.power=1.5} for the smoothing spline, 
 polynomial, lowess, or tweedie models, respectively.
   \item \strong{typeChangeVariable}: type of change variable: "abs" (absolute, value by default) or "rel" (relative).
-  \item \strong{ANOVAmethod}: ANOVA method: "Bayesian" applies the method described in Evin et al. (2020),
-  "lm" applies a simple linear model to estimate the main effects.
+  \item \strong{ANOVAmethod}: ANOVA method: "lm" (default) applies a linear model (\code{\link[stats]{lm}}) to estimate the main effects. 
+"Bayesian" applies the method described in Evin et al. (2020).   
   \item \strong{nBurn}: if \code{ANOVAmethod=="Bayesian"}, number of burn-in samples (default: 1000).
   If \code{nBurn} is too small, the convergence of MCMC chains might not be obtained.
   \item \strong{nKeep}: if \code{ANOVAmethod=="Bayesian"}, number of kept samples (default: 2000).
@@ -123,7 +117,7 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
      probability \code{quantilePosterior} given in \code{listOption} if
      \code{ANOVAmethod=="Bayesian"}.
   }
-  \item \strong{INTERNALVAR}: Internal variability (constant over time)
+  \item \strong{INTERNALVAR}: Internal variability
   \item \strong{TOTALVAR}: total variability, i.e. the sum of internal variability,
       residual variability and variability related to the main effects
   \item \strong{DECOMPVAR}: Decomposition of the total variability for each component
@@ -133,13 +127,16 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
   \item \strong{namesEff}: names of the main effects
   \item \strong{Y}: matrix of available combinations given as inputs
   \item \strong{listOption}: list of options used to obtained these results
-  (obtained from \code{\link{QUALYPSO.check.option}})
+  (output of \code{\link{QUALYPSO.check.option}})
   \item \strong{listScenarioInput}: list of scenario characteristics
-  (obtained from \code{\link{QUALYPSO.process.scenario}})
+  (output of \code{\link{QUALYPSO.process.scenario}})
 }
 }
 \description{
-Partition uncertainty in climate responses using an ANOVA applied to climate change responses.
+Partition uncertainty in climate responses using an ANOVA applied to climate change responses. The main
+function of the package needs at least two arguments: \code{Y} is an ensemble of climate projections, i.e. a matrix
+\code{nS} x \code{nY} where \code{nS} projections are provided for \code{nY} years or future time steps; 
+\code{scenAvail} is a \code{\link[base]{data.frame}} which provides \code{nEff} characteristics for each projection.
 }
 \examples{
 
@@ -218,6 +215,12 @@ listOption = list(typeChangeVariable='abs')
 QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
                          Xfut=Xfut_time,listOption=listOption)
 
+# diagnostic of the climate responses
+plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+
+# diagnostic of the internal variability
+plotQUALYPSOinternalvar(QUALYPSO.globaltas)
+
 # grand mean effect
 plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
 
@@ -241,6 +244,12 @@ listOption = list(typeChangeVariable='abs')
 # call QUALYPSO
 QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
                               Xfut=Xfut_globaltas,listOption=listOption)
+
+# diagnostic of the climate responses
+plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+
+# diagnostic of the internal variability
+plotQUALYPSOinternalvar(QUALYPSO.globaltas)
 
 # grand mean effect
 plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global warming (Celsius)")

@@ -34,7 +34,7 @@ list with the following fields for each simulation chain:
   \item \strong{etaStar}: \code{nS x nY}, deviation from the climate change response
   due to the internal variability, for \code{Xmat}
   \item \strong{phi}: \code{nS x nF}, raw trends obtained using \link[stats]{smooth.spline}
-  \item \strong{varInterVariability}: scalar, internal variability component of the MME
+  \item \strong{varInterVariability}: \code{nF}, internal variability component of the MME
 }
 }
 \description{

@@ -1,15 +1,22 @@
 Package: QUALYPSO
 Type: Package
-Date: 2026-05-11
+Date: 2026-05-25
 License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
-Version: 3.0
+Version: 3.1
 Authors@R: c(person("Guillaume","Evin",role = c("aut", "cre"),email="guillaume.evin@inrae.fr"))
 Author: Guillaume Evin [aut, cre]
 Maintainer: Guillaume Evin <guillaume.evin@inrae.fr>
 Imports: MASS, expm, Rfast, stats, graphics, grDevices, gamlss, gamlss.dist, statmod
-Description: These functions use data augmentation and Bayesian techniques for the assessment of single-member and incomplete ensembles of climate projections. It provides unbiased estimates of climate change responses of all simulation chains and of all uncertainty variables. It additionally propagates uncertainty due to missing information in the estimates.
-  - Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie. (2019) <doi:10.1175/JCLI-D-18-0606.1>.
+Description: These functions use data augmentation and Bayesian techniques for the assessment 
+    of single-member and incomplete ensembles of climate projections. It provides unbiased 
+    estimates of climate change responses of all simulation chains and of all uncertainty variables.
+    It additionally propagates uncertainty due to missing information in the estimates. It has been
+    applied to different ensembles of projections simulated to study the impact of climate change: 
+    for climate indicators in Evin et al. (2019) <doi:10.1175/JCLI-D-18-0606.1>; seasonal precipitation
+    and temperature in Evin, Somot and Hingray (2021) <doi:10.5194/esd-12-1543-2021>; hydrological variables
+    in Evin et al. (2026) <doi:10.5194/hess-30-1023-2026>; photovoltaic energy in Bichet et al. (2019)
+    <doi:10.1088/1748-9326/ab500a>.
 Depends: R (>= 2.10)
 Encoding: UTF-8
 LazyData: true
