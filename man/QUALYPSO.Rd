@@ -216,10 +216,10 @@ QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
                          Xfut=Xfut_time,listOption=listOption)
 
 # diagnostic of the climate responses
-plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+plotQUALYPSOclimateResponse(QUALYPSO.time)
 
 # diagnostic of the internal variability
-plotQUALYPSOinternalvar(QUALYPSO.globaltas)
+plotQUALYPSOinternalvar(QUALYPSO.time)
 
 # grand mean effect
 plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
@@ -246,7 +246,7 @@ QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
                               Xfut=Xfut_globaltas,listOption=listOption)
 
 # diagnostic of the climate responses
-plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+plotQUALYPSOclimateResponse(QUALYPSO.globaltas)
 
 # diagnostic of the internal variability
 plotQUALYPSOinternalvar(QUALYPSO.globaltas)

@@ -1223,10 +1223,10 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #'                          Xfut=Xfut_time,listOption=listOption)
 #' 
 #' # diagnostic of the climate responses
-#' plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+#' plotQUALYPSOclimateResponse(QUALYPSO.time)
 #'
 #' # diagnostic of the internal variability
-#' plotQUALYPSOinternalvar(QUALYPSO.globaltas)
+#' plotQUALYPSOinternalvar(QUALYPSO.time)
 #' 
 #' # grand mean effect
 #' plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
@@ -1253,7 +1253,7 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #'                               Xfut=Xfut_globaltas,listOption=listOption)
 #'
 #' # diagnostic of the climate responses
-#' plotQUALYPSOclimateResponse(QUALYPSO.trunc)
+#' plotQUALYPSOclimateResponse(QUALYPSO.globaltas)
 #' 
 #' # diagnostic of the internal variability
 #' plotQUALYPSOinternalvar(QUALYPSO.globaltas)
@@ -1540,7 +1540,7 @@ plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="eta*",...
 
     # add legend
     legend("bottomright",legend = c("eta*", "+/- 1.645*sqrt(INTERNALVAR)"),
-           lty=c(NA,2), pch = c(20, NA), col=c("black","red"), bty="n")
+           lty=c(NA,1), pch = c(20, NA), col=c("black","red"), bty="n")
 }
 
 
@@ -1554,12 +1554,13 @@ plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="eta*",...
 #' @param lim y-axis limits (default is NULL)
 #' @param xlab x-axis label
 #' @param ylab y-axis label
+#' @param iS index of the projection (integer). If NULL, one scenario is chosen randomly
 #' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
 #'
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",...){
+plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",iS=NULL,...){
   # vector of predictors
   Xfut = QUALYPSOOUT$Xfut
 
@@ -1576,25 +1577,27 @@ plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",..
   # number of scenarios
   nS = nrow(Y)
 
-  for(iS in 1:nS){
-    Ys = Y[iS,]
-    Xs = Xmat[iS,]
-    phis = phi[iS,]
-
-    plot(-1, -1, xlim = range(c(Xs,Xfut)), ylim = range(c(Ys,phis)),
-         main=paste0(scenAvail[iS,],collapse = " / "),
-         xlab = xlab, ylab = ylab, ...)
-
-    # add lines of raw projection and climate projection
-    lines(Xs, Ys, lwd = 1)
-    lines(Xfut, phis, lwd = 3)
-
-    # add legend
-    legend("topleft",legend = c("Raw projection", "Climate response"),
-           lty=1,lwd=c(1,3),bty="n")
-
-    readline(prompt = "Press Enter")
+  # choose iS
+  if(is.null(iS)){
+    iS = sample(1:nS, 1)
   }
+
+  # plot climate response for one projection
+  Ys = Y[iS,]
+  Xs = Xmat[iS,]
+  phis = phi[iS,]
+
+  plot(-1, -1, xlim = range(c(Xs,Xfut)), ylim = range(c(Ys,phis)),
+        main=paste0(scenAvail[iS,],collapse = " / "),
+        xlab = xlab, ylab = ylab, ...)
+
+  # add lines of raw projection and climate projection
+  lines(Xs, Ys, lwd = 1)
+  lines(Xfut, phis, lwd = 3)
+
+  # add legend
+  legend("topleft",legend = c("Raw projection", "Climate response"),
+          lty=1,lwd=c(1,3),bty="n")
 }
 
 
