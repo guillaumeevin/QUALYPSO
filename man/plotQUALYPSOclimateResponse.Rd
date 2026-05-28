@@ -9,6 +9,7 @@ plotQUALYPSOclimateResponse(
   lim = NULL,
   xlab = "X",
   ylab = "Y",
+  iS = NULL,
   ...
 )
 }
@@ -20,6 +21,8 @@ plotQUALYPSOclimateResponse(
 \item{xlab}{x-axis label}
 
 \item{ylab}{y-axis label}
+
+\item{iS}{index of the projection (integer). If NULL, one scenario is chosen randomly}
 
 \item{...}{additional arguments to be passed to \code{\link[graphics]{plot}}}
 }
