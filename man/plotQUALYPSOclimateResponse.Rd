@@ -6,23 +6,23 @@
 \usage{
 plotQUALYPSOclimateResponse(
   QUALYPSOOUT,
+  iS = NULL,
   lim = NULL,
   xlab = "X",
   ylab = "Y",
-  iS = NULL,
   ...
 )
 }
 \arguments{
 \item{QUALYPSOOUT}{output from \code{\link{QUALYPSO}}}
 
+\item{iS}{index of the projection (integer). If NULL, one scenario is chosen randomly}
+
 \item{lim}{y-axis limits (default is NULL)}
 
 \item{xlab}{x-axis label}
 
 \item{ylab}{y-axis label}
-
-\item{iS}{index of the projection (integer). If NULL, one scenario is chosen randomly}
 
 \item{...}{additional arguments to be passed to \code{\link[graphics]{plot}}}
 }

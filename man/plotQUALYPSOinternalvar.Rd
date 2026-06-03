@@ -8,7 +8,7 @@ plotQUALYPSOinternalvar(
   QUALYPSOOUT,
   lim = NULL,
   xlab = "X",
-  ylab = "eta*",
+  ylab = expression(paste(eta, "*")),
   ...
 )
 }

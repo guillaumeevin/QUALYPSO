@@ -4,12 +4,12 @@
 \alias{QUALYPSO}
 \title{QUALYPSO}
 \usage{
-QUALYPSO(Y, scenAvail, X = NULL, Xfut = NULL, listOption = NULL)
+QUALYPSO(Y, scen, X = NULL, Xfut = NULL, listOption = NULL)
 }
 \arguments{
 \item{Y}{matrix \code{nS} x \code{nY} of climate projections.}
 
-\item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
+\item{scen}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.}
 
@@ -32,7 +32,7 @@ where the parameter \code{degree} is an integer indicating the degree of the pol
 "lowess" (\code{\link[stats]{lowess}}) where the parameter \code{f} in (0,1) is the proportion of points which influence
 the smooth at each value, or "tweedie" (\code{\link[statmod]{tweedie}}), a Generalized Linear Model with the Tweedie 
 distribution where the parameter \code{var.power} is the index of power variance function (positive value). The tweedie 
-model is the only model that handles zeros in the climate projections \code{var.power} is in (1,2).
+model is the only model that handles zeros in the climate projections, typically with \code{var.power} in (1,2).
   \item \strong{parClimateResponse}: parameter of the model applied for the extraction of the climate response (i.e. \code{df}, \code{degree},
 \code{f}, or \code{var.power}). Default values are \code{df=4}, \code{degree=1}, \code{f=0.4} or \code{var.power=1.5} for the smoothing spline, 
 polynomial, lowess, or tweedie models, respectively.
@@ -136,7 +136,7 @@ if \code{Y} is a matrix or for each grid point if \code{Y} is an array, with the
 Partition uncertainty in climate responses using an ANOVA applied to climate change responses. The main
 function of the package needs at least two arguments: \code{Y} is an ensemble of climate projections, i.e. a matrix
 \code{nS} x \code{nY} where \code{nS} projections are provided for \code{nY} years or future time steps; 
-\code{scenAvail} is a \code{\link[base]{data.frame}} which provides \code{nEff} characteristics for each projection.
+\code{scen} is a \code{\link[base]{data.frame}} which provides \code{nEff} characteristics for each projection.
 }
 \examples{
 
@@ -146,7 +146,7 @@ function of the package needs at least two arguments: \code{Y} is an ensemble of
 # call main QUALYPSO function: two arguments are mandatory:
 # - Y: Climate projections for nS scenarios and nY time steps. Y is a matrix nS x nY, we
 # run QUALYPSO nY times, for each time step.
-# - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
+# - scen: matrix or data.frame of available combinations nS x nEff. The number of
 # characteristics nEff corresponds to the number of main effects that will be included in the
 # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
 # and RCMs.
@@ -175,33 +175,33 @@ scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n+1,sd=0.5)
 scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n+1,sd=0.5)
 scenGCM2RCM2 = effGCM2 + effRCM2 + rnorm(n=n+1,sd=0.5)
 scenGCM3RCM1 = effGCM3 + effRCM1 + rnorm(n=n+1,sd=0.5)
-Y.synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1,scenGCM2RCM2,scenGCM3RCM1)
+Y_synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1,scenGCM2RCM2,scenGCM3RCM1)
 
-# Here, scenAvail indicates that the first scenario is obtained with the combination of the
+# Here, scen indicates that the first scenario is obtained with the combination of the
 # GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
 # the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
 # of the GCM "GCM2" and RCM "RCM1".
-scenAvail.synth = data.frame(GCM=c('GCM1','GCM1','GCM2','GCM2','GCM3'),
+scen_synth = data.frame(GCM=c('GCM1','GCM1','GCM2','GCM2','GCM3'),
 RCM=c('RCM1','RCM2','RCM1','RCM2','RCM1'))
 
 
 # run QUALYPSO
-QUALYPSO.synth = QUALYPSO(Y=Y.synth, scenAvail=scenAvail.synth, X=2000:2020,
+QUALYPSO_synth = QUALYPSO(Y=Y_synth, scen=scen_synth, X=2000:2020,
 listOption = list(typeClimateResponse="poly"))
 
 # plot main GCM effects
-plotQUALYPSOeffect(QUALYPSO.synth,nameEff="GCM",xlab="Years")
+plotQUALYPSOeffect(QUALYPSO_synth,nameEff="GCM",xlab="Years")
 lines(2000:2020, effGCM1,lty=2,lwd=2,col="black")
 lines(2000:2020, effGCM2,lty=2,lwd=2,col="red")
 lines(2000:2020, effGCM3,lty=2,lwd=2,col="green")
 
 # plot main RCM effects
-plotQUALYPSOeffect(QUALYPSO.synth,nameEff="RCM",xlab="Years")
+plotQUALYPSOeffect(QUALYPSO_synth,nameEff="RCM",xlab="Years")
 lines(2000:2020, effRCM1,lty=2,lwd=2,col="black")
 lines(2000:2020, effRCM2,lty=2,lwd=2,col="red")
 
 # plot fraction of total variance for the differences sources of uncertainty
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.synth,xlab="Years")
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_synth,xlab="Years")
 
 #____________________________________________________________
 # Example 2: climate projections of mean winter (DJF) temperature
@@ -212,26 +212,26 @@ plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.synth,xlab="Years")
 listOption = list(typeChangeVariable='abs')
 
 # call QUALYPSO
-QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
-                         Xfut=Xfut_time,listOption=listOption)
+QUALYPSO_time = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=1971:2099,
+                         Xfut=1990:2099,listOption=listOption)
 
 # diagnostic of the climate responses
-plotQUALYPSOclimateResponse(QUALYPSO.time)
+plotQUALYPSOclimateResponse(QUALYPSO_time)
 
 # diagnostic of the internal variability
-plotQUALYPSOinternalvar(QUALYPSO.time)
+plotQUALYPSOinternalvar(QUALYPSO_time)
 
 # grand mean effect
-plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
+plotQUALYPSOgrandmean(QUALYPSO_time,xlab="Years")
 
 # main GCM effects
-plotQUALYPSOeffect(QUALYPSO.time,nameEff="GCM",xlab="Years")
+plotQUALYPSOeffect(QUALYPSO_time,nameEff="GCM",xlab="Years")
 
 # main RCM effects
-plotQUALYPSOeffect(QUALYPSO.time,nameEff="RCM",xlab="Years")
+plotQUALYPSOeffect(QUALYPSO_time,nameEff="RCM",xlab="Years")
 
 # variance decomposition
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_time,xlab="Years")
 
 #____________________________________________________________
 # Example 3: climate projections of mean winter (DJF) temperature
@@ -242,26 +242,26 @@ plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
 listOption = list(typeChangeVariable='abs')
 
 # call QUALYPSO
-QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
-                              Xfut=Xfut_globaltas,listOption=listOption)
+QUALYPSO_wl = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=X_DJFTas_WL,
+                              Xfut=seq(from=0.5,to=3,by=0.1),listOption=listOption)
 
 # diagnostic of the climate responses
-plotQUALYPSOclimateResponse(QUALYPSO.globaltas)
+plotQUALYPSOclimateResponse(QUALYPSO_wl)
 
 # diagnostic of the internal variability
-plotQUALYPSOinternalvar(QUALYPSO.globaltas)
+plotQUALYPSOinternalvar(QUALYPSO_wl)
 
 # grand mean effect
-plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
+plotQUALYPSOgrandmean(QUALYPSO_wl,xlab="Global warming (Celsius)")
 
 # main GCM effects
-plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global warming (Celsius)")
+plotQUALYPSOeffect(QUALYPSO_wl,nameEff="GCM",xlab="Global warming (Celsius)")
 
 # main RCM effects
-plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global warming (Celsius)")
+plotQUALYPSOeffect(QUALYPSO_wl,nameEff="RCM",xlab="Global warming (Celsius)")
 
 # variance decomposition
-plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
+plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_wl,xlab="Global warming (Celsius)")
 
 }
 \references{

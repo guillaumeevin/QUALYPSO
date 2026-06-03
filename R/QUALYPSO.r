@@ -157,7 +157,7 @@ fit.climate.response = function(Y, typeClimateResponse, parClimateResponse, Xmat
       phiS = predict(smooth.spline.out, Xfut)$y
       phiC = predict(smooth.spline.out, Xref)$y
     }else if(typeClimateResponse == "tweedie"){
-      if(any(Ys < 0)){
+      if(any(dfpred$y < 0)){
         stop("the tweedie distributions are designed for non-negative, right-skewed 
         data with a mass at zero. They do not natively support negative input values 
         for the response variable, as they are typically used for continuous positive data.
@@ -259,7 +259,7 @@ fit.climate.response = function(Y, typeClimateResponse, parClimateResponse, Xmat
 Bayesian.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
   #============= retrieve objects related to the scenarios =====
   listEff=listScenarioInput$listEff
-  scenAvail=listScenarioInput$scenAvail
+  scen=listScenarioInput$scen
   scenComp=listScenarioInput$scenComp
   nEff=listScenarioInput$nEff
   nTypeEff=listScenarioInput$nTypeEff
@@ -309,8 +309,8 @@ Bayesian.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
   lam.sig = 0.5
   X.diff = phiStar.i-mean(phiStar.i,na.rm=T)
   for(i.eff in 1:nEff){
-    eff.hat = aggregate(x = X.diff, by = list(scenAvail[,i.eff]), FUN = "mean")
-    X.diff = X.diff - eff.hat$x[match(scenAvail[,i.eff],eff.hat$Group.1)]
+    eff.hat = aggregate(x = X.diff, by = list(scen[,i.eff]), FUN = "mean")
+    X.diff = X.diff - eff.hat$x[match(scen[,i.eff],eff.hat$Group.1)]
   }
   nu.sig = 0.5*var(as.vector(X.diff),na.rm=T)
   s2eff = largevar
@@ -394,20 +394,20 @@ Bayesian.ANOVA.i = function(phiStar.i, nMCMC, listScenarioInput){
 #'
 #' Process input scenarios.
 #'
-#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
+#' @param scen data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #'
-#' @return list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
+#' @return list of preprocessed objects (\code{listEff, scen, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
 #' indexEffInCompScen, Qmat})
 #'
 #' @author Guillaume Evin
-QUALYPSO.process.scenario = function(scenAvail){
+QUALYPSO.process.scenario = function(scen){
   # number of scenarios
-  nS = nrow(scenAvail)
+  nS = nrow(scen)
 
   # list of effects
-  nEff = ncol(scenAvail)
+  nEff = ncol(scen)
   listEff = list()
-  for(i in 1:nEff) listEff[[i]] = unique(scenAvail[,i])
+  for(i in 1:nEff) listEff[[i]] = unique(scen[,i])
   nTypeEff = unlist(lapply(listEff,length))
 
   # possible combinations of main effects
@@ -417,13 +417,13 @@ QUALYPSO.process.scenario = function(scenAvail){
 
   #########  Missing scenarios   #########
   vScenComp <- apply(scenComp, 1, paste, collapse='.')
-  vScenAvail <- apply(scenAvail, 1, paste, collapse='.')
-  isMissing = !vScenComp%in%vScenAvail
+  vscen <- apply(scen, 1, paste, collapse='.')
+  isMissing = !vScenComp%in%vscen
   nMissing = sum(isMissing)
 
 
   #########   vector of projections to complete with data augmentation   #########
-  iMatchScen = match(vScenComp,vScenAvail)
+  iMatchScen = match(vScenComp,vscen)
 
 
   #########   matrix of effect index: for each main effect, index of 'scenComp' (combinations of scenarios) related to listEff   #########
@@ -441,7 +441,7 @@ QUALYPSO.process.scenario = function(scenAvail){
 
 
   return(list(listEff=listEff,
-              scenAvail=scenAvail, scenComp=scenComp,
+              scen=scen, scenComp=scenComp,
               nEff=nEff, nTypeEff=nTypeEff, nComp=nComp,
               isMissing=isMissing, nMissing=nMissing,
               iMatchScen=iMatchScen,
@@ -559,7 +559,7 @@ QUALYPSO.check.option = function(listOption){
 #'
 #' @param phiStar matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}.
 #' \code{n} can be the number of time steps or the number of grid points
-#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
+#' @param scen data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #' @param listOption list of options (see \code{\link{QUALYPSO}})
 #' @param namesEff names of the main effects
 #'
@@ -628,7 +628,7 @@ QUALYPSO.check.option = function(listOption){
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
 #' Journal of Climate. <doi:10.1175/JCLI-D-18-0606.1>.
-Bayesian.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
+Bayesian.ANOVA = function(phiStar,scen,listOption=NULL,namesEff){
   #########  process input #########
   # number of grid points / years
   n = dim(phiStar)[2]
@@ -638,7 +638,7 @@ Bayesian.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
   vec.keep = (listOption$nBurn+1):listOption$nMCMC
 
   # Process scenarios data.frame to get different objects
-  listScenarioInput = QUALYPSO.process.scenario(scenAvail = scenAvail)
+  listScenarioInput = QUALYPSO.process.scenario(scen = scen)
   nEff = listScenarioInput$nEff
   nTypeEff = listScenarioInput$nTypeEff
 
@@ -795,7 +795,7 @@ Bayesian.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' Partition uncertainty in climate responses using an ANOVA inferred with a Bayesian approach.
 #'
 #' @param phiStar matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}. \code{n} can be the number of time steps or the number of grid points
-#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
+#' @param scen data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios
 #' @param listOption list of options (see \code{\link{QUALYPSO}})
 #' @param namesEff names of the main effects
 #'
@@ -841,13 +841,13 @@ Bayesian.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
 #' @export
 #'
 #' @author Guillaume Evin
-lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
+lm.ANOVA = function(phiStar,scen,listOption=NULL,namesEff){
   #########  process input #########
   # number of grid points / years
   n = dim(phiStar)[2]
 
   # Process scenarios data.frame to get different objects
-  listScenarioInput = QUALYPSO.process.scenario(scenAvail = scenAvail)
+  listScenarioInput = QUALYPSO.process.scenario(scen = scen)
   nEff = listScenarioInput$nEff
   nTypeEff = listScenarioInput$nTypeEff
   listEff = listScenarioInput$listEff
@@ -863,7 +863,7 @@ lm.ANOVA = function(phiStar,scenAvail,listOption=NULL,namesEff){
   formula = paste0("phiStar ~ ",paste0(namesEff,collapse = " + "))
 
   # build data for the call to the lm function
-  lm.data = scenAvail
+  lm.data = scen
 
   lm.out = lm.sum = list()
   for(i in 1:n){
@@ -1023,10 +1023,10 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' Partition uncertainty in climate responses using an ANOVA applied to climate change responses. The main
 #' function of the package needs at least two arguments: \code{Y} is an ensemble of climate projections, i.e. a matrix
 #' \code{nS} x \code{nY} where \code{nS} projections are provided for \code{nY} years or future time steps; 
-#' \code{scenAvail} is a \code{\link[base]{data.frame}} which provides \code{nEff} characteristics for each projection.
+#' \code{scen} is a \code{\link[base]{data.frame}} which provides \code{nEff} characteristics for each projection.
 #'
 #' @param Y matrix \code{nS} x \code{nY} of climate projections.
-#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
+#' @param scen data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 #' (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
 #'  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.
 #' @param X (optional) predictors corresponding to the projections, e.g. time or global temperature.
@@ -1046,7 +1046,7 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' "lowess" (\code{\link[stats]{lowess}}) where the parameter \code{f} in (0,1) is the proportion of points which influence
 #' the smooth at each value, or "tweedie" (\code{\link[statmod]{tweedie}}), a Generalized Linear Model with the Tweedie 
 #' distribution where the parameter \code{var.power} is the index of power variance function (positive value). The tweedie 
-#' model is the only model that handles zeros in the climate projections \code{var.power} is in (1,2).
+#' model is the only model that handles zeros in the climate projections, typically with \code{var.power} in (1,2).
 #'   \item \strong{parClimateResponse}: parameter of the model applied for the extraction of the climate response (i.e. \code{df}, \code{degree},
 #' \code{f}, or \code{var.power}). Default values are \code{df=4}, \code{degree=1}, \code{f=0.4} or \code{var.power=1.5} for the smoothing spline, 
 #' polynomial, lowess, or tweedie models, respectively.
@@ -1153,7 +1153,7 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' # call main QUALYPSO function: two arguments are mandatory:
 #' # - Y: Climate projections for nS scenarios and nY time steps. Y is a matrix nS x nY, we
 #' # run QUALYPSO nY times, for each time step.
-#' # - scenAvail: matrix or data.frame of available combinations nS x nEff. The number of
+#' # - scen: matrix or data.frame of available combinations nS x nEff. The number of
 #' # characteristics nEff corresponds to the number of main effects that will be included in the
 #' # ANOVA model. In the following example, we have nEff=2 main effects corresponding to the GCMs
 #' # and RCMs.
@@ -1182,33 +1182,33 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n+1,sd=0.5)
 #' scenGCM2RCM2 = effGCM2 + effRCM2 + rnorm(n=n+1,sd=0.5)
 #' scenGCM3RCM1 = effGCM3 + effRCM1 + rnorm(n=n+1,sd=0.5)
-#' Y.synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1,scenGCM2RCM2,scenGCM3RCM1)
+#' Y_synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1,scenGCM2RCM2,scenGCM3RCM1)
 #' 
-#' # Here, scenAvail indicates that the first scenario is obtained with the combination of the
+#' # Here, scen indicates that the first scenario is obtained with the combination of the
 #' # GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
 #' # the GCM "GCM1" and RCM "RCM2" and the third scenario is obtained with the combination
 #' # of the GCM "GCM2" and RCM "RCM1".
-#' scenAvail.synth = data.frame(GCM=c('GCM1','GCM1','GCM2','GCM2','GCM3'),
+#' scen_synth = data.frame(GCM=c('GCM1','GCM1','GCM2','GCM2','GCM3'),
 #' RCM=c('RCM1','RCM2','RCM1','RCM2','RCM1'))
 #'
 #'
 #' # run QUALYPSO
-#' QUALYPSO.synth = QUALYPSO(Y=Y.synth, scenAvail=scenAvail.synth, X=2000:2020,
+#' QUALYPSO_synth = QUALYPSO(Y=Y_synth, scen=scen_synth, X=2000:2020,
 #' listOption = list(typeClimateResponse="poly"))
 #'
 #' # plot main GCM effects
-#' plotQUALYPSOeffect(QUALYPSO.synth,nameEff="GCM",xlab="Years")
+#' plotQUALYPSOeffect(QUALYPSO_synth,nameEff="GCM",xlab="Years")
 #' lines(2000:2020, effGCM1,lty=2,lwd=2,col="black")
 #' lines(2000:2020, effGCM2,lty=2,lwd=2,col="red")
 #' lines(2000:2020, effGCM3,lty=2,lwd=2,col="green")
 #'
 #' # plot main RCM effects
-#' plotQUALYPSOeffect(QUALYPSO.synth,nameEff="RCM",xlab="Years")
+#' plotQUALYPSOeffect(QUALYPSO_synth,nameEff="RCM",xlab="Years")
 #' lines(2000:2020, effRCM1,lty=2,lwd=2,col="black")
 #' lines(2000:2020, effRCM2,lty=2,lwd=2,col="red")
 #'
 #' # plot fraction of total variance for the differences sources of uncertainty
-#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.synth,xlab="Years")
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_synth,xlab="Years")
 #'
 #' #____________________________________________________________
 #' # Example 2: climate projections of mean winter (DJF) temperature
@@ -1219,26 +1219,26 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' listOption = list(typeChangeVariable='abs')
 #'
 #' # call QUALYPSO
-#' QUALYPSO.time = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_time_vec,
-#'                          Xfut=Xfut_time,listOption=listOption)
+#' QUALYPSO_time = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=1971:2099,
+#'                          Xfut=1990:2099,listOption=listOption)
 #' 
 #' # diagnostic of the climate responses
-#' plotQUALYPSOclimateResponse(QUALYPSO.time)
+#' plotQUALYPSOclimateResponse(QUALYPSO_time)
 #'
 #' # diagnostic of the internal variability
-#' plotQUALYPSOinternalvar(QUALYPSO.time)
+#' plotQUALYPSOinternalvar(QUALYPSO_time)
 #' 
 #' # grand mean effect
-#' plotQUALYPSOgrandmean(QUALYPSO.time,xlab="Years")
+#' plotQUALYPSOgrandmean(QUALYPSO_time,xlab="Years")
 #'
 #' # main GCM effects
-#' plotQUALYPSOeffect(QUALYPSO.time,nameEff="GCM",xlab="Years")
+#' plotQUALYPSOeffect(QUALYPSO_time,nameEff="GCM",xlab="Years")
 #'
 #' # main RCM effects
-#' plotQUALYPSOeffect(QUALYPSO.time,nameEff="RCM",xlab="Years")
+#' plotQUALYPSOeffect(QUALYPSO_time,nameEff="RCM",xlab="Years")
 #'
 #' # variance decomposition
-#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.time,xlab="Years")
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_time,xlab="Years")
 #'
 #' #____________________________________________________________
 #' # Example 3: climate projections of mean winter (DJF) temperature
@@ -1249,26 +1249,26 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' listOption = list(typeChangeVariable='abs')
 #'
 #' # call QUALYPSO
-#' QUALYPSO.globaltas = QUALYPSO(Y=Y,scenAvail=scenAvail,X=X_globaltas,
-#'                               Xfut=Xfut_globaltas,listOption=listOption)
+#' QUALYPSO_wl = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=X_DJFTas_WL,
+#'                               Xfut=seq(from=0.5,to=3,by=0.1),listOption=listOption)
 #'
 #' # diagnostic of the climate responses
-#' plotQUALYPSOclimateResponse(QUALYPSO.globaltas)
+#' plotQUALYPSOclimateResponse(QUALYPSO_wl)
 #' 
 #' # diagnostic of the internal variability
-#' plotQUALYPSOinternalvar(QUALYPSO.globaltas)
+#' plotQUALYPSOinternalvar(QUALYPSO_wl)
 #' 
 #' # grand mean effect
-#' plotQUALYPSOgrandmean(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
+#' plotQUALYPSOgrandmean(QUALYPSO_wl,xlab="Global warming (Celsius)")
 #'
 #' # main GCM effects
-#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="GCM",xlab="Global warming (Celsius)")
+#' plotQUALYPSOeffect(QUALYPSO_wl,nameEff="GCM",xlab="Global warming (Celsius)")
 #'
 #' # main RCM effects
-#' plotQUALYPSOeffect(QUALYPSO.globaltas,nameEff="RCM",xlab="Global warming (Celsius)")
+#' plotQUALYPSOeffect(QUALYPSO_wl,nameEff="RCM",xlab="Global warming (Celsius)")
 #'
 #' # variance decomposition
-#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO.globaltas,xlab="Global warming (Celsius)")
+#' plotQUALYPSOTotalVarianceDecomposition(QUALYPSO_wl,xlab="Global warming (Celsius)")
 #'
 #' @references Evin, G., B. Hingray, J. Blanchet, N. Eckert, S. Morin, and D. Verfaillie (2020)
 #' Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections Using Data Augmentation.
@@ -1277,14 +1277,14 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #' @export
 #'
 #' @author Guillaume Evin
-QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
+QUALYPSO = function(Y,scen,X=NULL,Xfut=NULL,listOption=NULL){
   ######### Check inputs and assign default values ##########
 
   # Check list of options
   listOption = QUALYPSO.check.option(listOption)
 
   # Check  dimensions
-  checkTypeandDimension(Y, scenAvail, X)
+  checkTypeandDimension(Y, scen, X)
 
   # Y is a matrix: Scenario x Time
   nS = nrow(Y)
@@ -1365,10 +1365,10 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
   phiStar.ANOVA = phiStar
 
   # names of the main effect
-  if(is.null(colnames(scenAvail))){
-    namesEff = paste0("Eff",1:ncol(scenAvail))
+  if(is.null(colnames(scen))){
+    namesEff = paste0("Eff",1:ncol(scen))
   }else{
-    namesEff = colnames(scenAvail)
+    namesEff = colnames(scen)
   }
 
   #====================================================================================================
@@ -1384,7 +1384,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
   # formula
   formula = paste0("phiStar ~ ",paste0(namesEff,collapse = " + "))
   #lm
-  lm.data = scenAvail
+  lm.data = scen
   lm.data$phiStar=phiStar.ANOVA[,ncol(phiStar.ANOVA)]
   lm.out = lm(formula, lm.data,contrasts=list.contrasts)
   if(any(is.na(lm.out$coefficients))){
@@ -1394,9 +1394,9 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
   ##################
   # ANOVA on phiStar
   if(listOption$ANOVAmethod=="Bayesian"){
-    anova = Bayesian.ANOVA(phiStar = phiStar.ANOVA, scenAvail = scenAvail, listOption = listOption, namesEff = namesEff)
+    anova = Bayesian.ANOVA(phiStar = phiStar.ANOVA, scen = scen, listOption = listOption, namesEff = namesEff)
   }else{
-    anova = lm.ANOVA(phiStar = phiStar.ANOVA, scenAvail = scenAvail, listOption = listOption, namesEff = namesEff)
+    anova = lm.ANOVA(phiStar = phiStar.ANOVA, scen = scen, listOption = listOption, namesEff = namesEff)
   }
 
 
@@ -1417,7 +1417,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
   RESERR = matrix(nrow=nP,ncol=nS)
   for(iS in 1:nS){
     for(iE in 1:nEff){
-      indE = which(scenAvail[iS,iE]==listEff[[iE]])
+      indE = which(scen[iS,iE]==listEff[[iE]])
       mat.eff[,iE] = effhat[[namesEff[iE]]]$MEAN[,indE]
     }
     RESERR[,iS] = phiStar.ANOVA[iS,1:nP] - muHat - Rfast::rowsums(mat.eff)
@@ -1460,7 +1460,7 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
 #' Check type and dimensions if objects passed as arguments
 #'
 #' @param Y matrix \code{nS} x \code{nY}
-#' @param scenAvail data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
+#' @param scen data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 #' (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
 #'  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.
 #' @param X (optional) predictors corresponding to the projections, e.g. time or global temperature.
@@ -1469,16 +1469,16 @@ QUALYPSO = function(Y,scenAvail,X=NULL,Xfut=NULL,listOption=NULL){
 #' a vector \code{1:nY} is created.
 #'
 #' @author Guillaume Evin
-checkTypeandDimension = function(Y, scenAvail, X){
+checkTypeandDimension = function(Y, scen, X){
   # Y
   dimY = dim(Y)
   if(length(dimY)!=2){
     stop(paste('Y must be a matrix nS x nY. Y:\n', Y))
   }
 
-  # scenAvail
-  if(!is.data.frame(scenAvail)){
-    stop(paste('scenAvail must be a data.frame and not a ',class(scenAvail)))
+  # scen
+  if(!is.data.frame(scen)){
+    stop(paste('scen must be a data.frame and not a ',class(scen)))
   }
 
   # X
@@ -1511,7 +1511,7 @@ checkTypeandDimension = function(Y, scenAvail, X){
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="eta*",...){
+plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab=expression(paste(eta,"*")),...){
   # vector of predictors
   Xfut = QUALYPSOOUT$Xfut
   Xmat = QUALYPSOOUT$Xmat
@@ -1539,8 +1539,8 @@ plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="eta*",...
   
 
     # add legend
-    legend("bottomright",legend = c("eta*", "+/- 1.645*sqrt(INTERNALVAR)"),
-           lty=c(NA,1), pch = c(20, NA), col=c("black","red"), bty="n")
+    legend("bottomright",legend = c("+/- 1.645*sqrt(INTERNALVAR)", expression(paste(eta,"*"))),
+           lty=c(1,NA), pch = c(NA,20), col=c("red","black"), bty="n")
 }
 
 
@@ -1551,16 +1551,16 @@ plotQUALYPSOinternalvar = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="eta*",...
 #' Plot the climate responses.
 #'
 #' @param QUALYPSOOUT output from \code{\link{QUALYPSO}}
+#' @param iS index of the projection (integer). If NULL, one scenario is chosen randomly
 #' @param lim y-axis limits (default is NULL)
 #' @param xlab x-axis label
 #' @param ylab y-axis label
-#' @param iS index of the projection (integer). If NULL, one scenario is chosen randomly
 #' @param ... additional arguments to be passed to \code{\link[graphics]{plot}}
 #'
 #' @export
 #'
 #' @author Guillaume Evin
-plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",iS=NULL,...){
+plotQUALYPSOclimateResponse = function(QUALYPSOOUT,iS=NULL,lim=NULL,xlab="X",ylab="Y",...){
   # vector of predictors
   Xfut = QUALYPSOOUT$Xfut
 
@@ -1568,7 +1568,7 @@ plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",iS
   phi = QUALYPSOOUT$CLIMATERESPONSE$phi
 
   # list of scenarios
-  scenAvail = QUALYPSOOUT$listScenarioInput$scenAvail
+  scen = QUALYPSOOUT$listScenarioInput$scen
 
   # Xmat and Y arguments
   Xmat = QUALYPSOOUT$Xmat
@@ -1588,7 +1588,7 @@ plotQUALYPSOclimateResponse = function(QUALYPSOOUT,lim=NULL,xlab="X",ylab="Y",iS
   phis = phi[iS,]
 
   plot(-1, -1, xlim = range(c(Xs,Xfut)), ylim = range(c(Ys,phis)),
-        main=paste0(scenAvail[iS,],collapse = " / "),
+        main=paste0(scen[iS,],collapse = " / "),
         xlab = xlab, ylab = ylab, ...)
 
   # add lines of raw projection and climate projection

@@ -4,13 +4,13 @@
 \alias{QUALYPSO.process.scenario}
 \title{QUALYPSO.process.scenario}
 \usage{
-QUALYPSO.process.scenario(scenAvail)
+QUALYPSO.process.scenario(scen)
 }
 \arguments{
-\item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios}
+\item{scen}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios}
 }
 \value{
-list of preprocessed objects (\code{listEff, scenAvail, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
+list of preprocessed objects (\code{listEff, scen, scenComp, nEff, nTypeEff, nComp, isMissing, nMissing, iMatchScen,
 indexEffInCompScen, Qmat})
 }
 \description{

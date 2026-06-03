@@ -4,13 +4,13 @@
 \alias{Bayesian.ANOVA}
 \title{Bayesian.ANOVA}
 \usage{
-Bayesian.ANOVA(phiStar, scenAvail, listOption = NULL, namesEff)
+Bayesian.ANOVA(phiStar, scen, listOption = NULL, namesEff)
 }
 \arguments{
 \item{phiStar}{matrix of climate change responses (absolute or relative changes): \code{nS} x \code{n}.
 \code{n} can be the number of time steps or the number of grid points}
 
-\item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios}
+\item{scen}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics (e.g. type of GCM) for each of the \code{nS} x \code{nS} scenarios}
 
 \item{listOption}{list of options (see \code{\link{QUALYPSO}})}
 

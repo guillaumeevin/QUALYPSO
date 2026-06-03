@@ -1,9 +1,9 @@
 Package: QUALYPSO
 Type: Package
-Date: 2026-05-28
+Date: 2026-06-02
 License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
-Version: 3.1
+Version: 3.2
 Authors@R: c(person("Guillaume","Evin",role = c("aut", "cre"),email="guillaume.evin@inrae.fr"))
 Author: Guillaume Evin [aut, cre]
 Maintainer: Guillaume Evin <guillaume.evin@inrae.fr>
@@ -15,7 +15,7 @@ Description: These functions apply an analysis of variance to incomplete ensembl
     and temperature in Evin, Somot and Hingray (2021) <doi:10.5194/esd-12-1543-2021>; hydrological variables
     in Evin et al. (2026) <doi:10.5194/hess-30-1023-2026>; photovoltaic energy in Bichet et al. (2019)
     <doi:10.1088/1748-9326/ab500a>.
-Depends: R (>= 2.10)
+Depends: R (>= 3.5.0)
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 8.0.0

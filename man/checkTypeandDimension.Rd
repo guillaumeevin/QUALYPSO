@@ -4,12 +4,12 @@
 \alias{checkTypeandDimension}
 \title{checkTypeandDimension}
 \usage{
-checkTypeandDimension(Y, scenAvail, X)
+checkTypeandDimension(Y, scen, X)
 }
 \arguments{
 \item{Y}{matrix \code{nS} x \code{nY}}
 
-\item{scenAvail}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
+\item{scen}{data.frame \code{nS} x \code{nEff} with the \code{nEff} characteristics
 (e.g. type of GCM) for each of the \code{nS} scenarios. The number of characteristics
  \code{nEff} corresponds to the number of main effects that will be included in the ANOVA model.}
 
