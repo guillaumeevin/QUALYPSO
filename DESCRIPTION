@@ -19,7 +19,8 @@ Description: These functions apply an analysis of variance to incomplete ensembl
 Depends: R (>= 3.5.0)
 Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    bookdown
 VignetteBuilder: knitr
 URL: https://github.com/guillaumeevin/QUALYPSO
 Encoding: UTF-8

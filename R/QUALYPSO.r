@@ -1065,9 +1065,9 @@ ContrSumMat <- function (fctr, sparse = FALSE) {
 #'   \item \strong{CCRV_tfut}: total uncertainty CCRV(t) i.e. the sum of variability related to the main effects
 #'   and residual variability     
 #'   \item \strong{FV_CCRV_tfut}: Fraction of total uncertainty CCRV(t) (in variance) explained by the different sources of uncertainty
-#'   \item \strong{CCRV_IV_tfut}: total uncertainty CCRV(t) + IV(t), i.e. the sum of variability related to the main effects
+#'   \item \strong{CCRV_IV_tfut}: total uncertainty CCRV(t) + IV(t), i.e. the sum of variability related to the main effects
 #'   residual variability and internal variability     
-#'   \item \strong{FV_CCRV_IV_tfut}: Fraction of total uncertainty CCRV(t) + IV(t) (in variance) explained by the different sources of uncertainty
+#'   \item \strong{FV_CCRV_IV_tfut}: Fraction of total uncertainty CCRV(t) + IV(t) (in variance) explained by the different sources of uncertainty
 #'   \item \strong{RESERR}: differences between the climate change responses and the additive anova formula (grand mean + main effects)
 #'   \item \strong{Xmat}: matrix of predictors
 #'   \item \strong{Xfut}: future predictor values
