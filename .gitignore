@@ -1,0 +1,16 @@
+vignettes/Rpaper.html
+man/process_scen.Rd
+man/plotQUALYPSO_CCR.Rd
+man/plotQUALYPSO_CR.Rd
+man/plotQUALYPSO_effect.Rd
+man/plotQUALYPSO_FV_CCRV_IV.Rd
+man/plotQUALYPSO_IV.Rd
+man/plotQUALYPSO_M.Rd
+man/fit_ClimateResponse.Rd
+man/get_Qmat.Rd
+man/get_Qstar_mat.Rd
+man/lm_ANOVA.Rd
+man/check_option.Rd
+man/check_arguments.Rd
+man/Bayesian_ANOVA_i.Rd
+man/Bayesian_ANOVA.Rd

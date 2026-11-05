@@ -1,0 +1,527 @@
+---
+title: "A short user's guide for QUALYPSO"
+date: "2026-11-03"
+vignette: >
+  %\VignetteIndexEntry{A short user's guide for QUALYPSO}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+abstract: >
+  This R package aims at characterizing the overall variability in an ensemble of climate projections (or an ensemble of projections of indicators impacted by climate change) 
+  given that different sources of uncertainty are present. It provides estimates of climate change responses of all simulation chains and of all uncertainty variables. 
+  It additionally propagates uncertainty due to missing information in the estimates.
+draft: true
+author:  
+  - name: Guillaume Evin
+    affiliation: Univ. Grenoble Alpes, INRAE, IGE - Institut des Géosciences de l'Environnement
+    address:
+    - Maison Climat Planète
+    - 70 rue de la Physique, 38400 St Martin d’Hères - France
+    url: https://www.ige-grenoble.fr/-Guillaume-Evin-
+    orcid: 0000-0003-3456-9441
+    email:  guillaume.evin@inrae.fr
+  - name: Benoit Hingray
+    affiliation: Univ. Grenoble Alpes, INRAE, IGE - Institut des Géosciences de l'Environnement
+    address:
+    - Maison Climat Planète
+    - 70 rue de la Physique, 38400 St Martin d’Hères - France
+    url: https://www.ige-grenoble.fr/-Hingray-Benoit-
+    orcid: 0000-0001-6991-0975
+    email:  benoit.hingray@univ-grenoble-alpes.fr
+type: package
+output: 
+  html_document:
+    bookdown::html_document2
+header-includes:
+  - \newcommand{\pandocbounded}[1]{#1}
+bibliography: RJreferences.bib
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(QUALYPSO)
+```
+
+# Introduction
+
+The package \CRANpkg{QUALYPSO} provides an easy-to-use statistical tool that performs analysis of variance (ANOVA) of ensembles of climate projections. In particular, different regression models are proposed 
+to estimate the climate response of a given chain and filter out fluctuations resulting from internal variability. The corresponding “Quasi-Ergodic Analysis of Climate Projections Using Data Augmentation” approach (QUALYPSO) was first designed to address this challenge and the treatment of incomplete ensemble using data augmentation techniques [@evinPartitioningUncertaintyComponents2019]. It has been applied to different ensembles 
+of projections: seasonal precipitation and temperature in @evinPartitioningUncertaintyComponents2019, and @evinBalancedEstimateUncertainty2021; hydrological variables in @evinUncertainty2026, 
+@lemaitre-bassetClimateChangeImpact2021, and @aitkenPartitioningModelUncertainty2023; photovoltaic energy in @bichetPotentialImpactClimate2019.
+
+Most of the studies about climate change impacts rely on future projections of some indicators describing the evolution of the different components of the earth system (e.g. atmosphere, oceans, cryosphere). 
+Regularly, Coupled Model Intercomparison Projects (CMIPs) provide large ensembles of projections simulated from different global climate models (GCMs) and regional climate models (RCMs) driven by a small 
+selection of emission scenarios (RCP, SSP) in order to improve knowledge on climate change and its impacts. Impact models (e.g. hydrological models), driven by climate projections, provide valuable information
+about climate change impacts in many sectors (agriculture, water resources, energy production, infrastructures, transport, economy, etc.).
+
+Multi-model projections of climate change impacts can be used to assess mean future trends, but characterising the overall variability of the ensemble and identify the main sources of uncertainty is arguably as
+important. Using an ANOVA implemented in QUALYPSO, @evinUncertainty2026 provide the contribution of each factor to the total variance of the ensemble. In this study, up to five sources of 
+ uncertainty are considered:
+
+* uncertainty on future emissions (i.e. scenario uncertainty), assessed using the simulations based on different emission scenarios,
+* global and regional climate model uncertainty, arising from the diversity of representation of the climate system by the different GCMs and RCMs,
+* hydrological model uncertainty, as a result of different representations of the hydrological system in four hydrological models,
+* climate internal variability (IV), which represent the inter-annual to decadal fluctations around the long-term response of climate change as a result of the chaotic nature of the climate system [@lehnerOriginImportancePredictive2023].
+
+Depending on the application, additional sources uncertainties can be considered. For example, @lemaitre-bassetClimateChangeImpact2021 considers different calibration schemes to evaluate the potential contribution of the hydrological model calibration to the total uncertainty.
+
+As a result of IV, climate projections include large fluctuations. The magnitude of IV depends on 1. the temporal (e.g. interannual or decadal variability) and/or spatial aggregation and 2. the indicators
+under consideration: IV is typically small for temperature (or indicators derived from temperature) and large for hydroclimate indicators (e.g. precipitation, flood), see @hawkinsPotentialNarrowUncertainty2009,
+@evinUncertainty2026. Due to IV, the estimation of the climate response, i.e. long-term evolutions of climate or hydroclimatic variable, can be challenging. QUALYPSO embeds different statistical models to
+estimate these climate responses. In addition, QUALYPSO also addresses:
+
+* incomplete ensembles: Some combinations of models and scenarios can be missing. This is usually the case when climate projections are simulated by RCMs.
+* unbalanced ensembles: Some models of a given model category (GCM, RCM) can be often over- or under-represented in large ensembles, see, e.g., the large EUROCORDEX MME assessed in @evinBalancedEstimateUncertainty2021.
+
+# Concepts
+
+To characterize how a given indicator is projected to change, QUALYPSO focuses on the climate change response (CCR) projected for the considered indicator. The CCR projected by a given simulation chain defines, for any future time, the absolute or relative difference of the long-term climate response for this future time compared to the reference time. QUALYPSO aims to estimate, for any future time, the CCR of each modeling chain, the mean CCR of the MME, the dispersion between the CCRs of individual chains, the sources of uncertainty explaining this dispersion, and the additional potential dispersion in future realizations of climate indicators that can result from IV.
+
+The QUALYPSO package contains a set of average winter temperature (DJF) climate projections for a region covering most of continental Europe (the SREX Central-Eastern Europe “CEU” region). The dataset `Y_DJFTas` contains projections for the period 1971-2099 (129 years) for 20 combinations of GCMs (CMIP5) and RCMs models, obtained with the RCP8.5 scenario, and is illustrated in Fig. \@ref(fig:Fig1). The main steps applied in QUALYPSO will be illustrated using this dataset and the name of the climate models (type of GCM and RCM) used to simulate the temperatures and provided by the data.frame `scen_DJFTas` (see Table \@ref(tab:Tab1)), so-called **``factors"** in ANOVA analyses.
+
+```{r Tab1, echo=FALSE, out.width="90%"}
+knitr::kable(head(scen_DJFTas), format = "markdown",caption = "Two factors characterise the climate projections for the ensemble of average winter temperatures: the GCM and the RCM.")
+```
+
+```{r Fig1, fig.cap="Ensemble of average winter temperature (DJF) climate projections for the SREX Central-Eastern Europe CEU region, obtained with 20 combinations of four GCMs and five RCMs. The different colors correspond to the different GCMs.", echo=TRUE, out.width="90%"}
+# plot of the 20 projections
+vecGCM = unique(scen_DJFTas$GCM)
+X_time_vec=1971:2099
+plot(-1,-1,xlim=range(X_time_vec),ylim=range(Y_DJFTas),xlab="Years",ylab="DJF Temperature (°C)")
+for(i in 1:nrow(Y_DJFTas)){
+  lines(X_time_vec,Y_DJFTas[i,],col=match(scen_DJFTas$GCM[i], vecGCM))
+}
+legend("bottomright",legend = vecGCM, col=1:length(vecGCM),lty=1)
+```
+
+## Main assumptions
+Following @hawkinsPotentialNarrowUncertainty2009 and @hingrayPartitioningInternalVariability2014, QUALYPSO is based on two main hypotheses expressed as follows:
+
+* We consider that the projection of a simulation chain $i$ combines two components: the climate response and internal variability. For a future time $t$, the climate response corresponds to the long-term trend of the simulated projection. We hypothesize that it has a temporal variation that is inherently gradual and smooth. The high- to mid-frequency fluctuations around the climate responses are assumed to result solely from IV.
+* The CCR of a simulation chain $i$ can be expressed as a linear sum of the ensemble mean and the main effects of the different components of the chain (e.g. main effects of the scenario $s$, GCM $g$, ...).
+
+The first assumption implies that it is reasonable to consider a trend model to estimate the climate response of a chain and, in turn, fluctuations due to IV (deviations from the climate response). @hingrayUncertaintyComponentEstimates2019 have shown that this assumption allows for providing more precise estimates for all uncertainty components than those obtained with standard time-slice approaches, i.e. using an ANOVA applied to different future time windows, see, e.g. @yipSimpleCoherentFramework2011 and many following works.
+
+The additive decomposition model of the second assumption can be derived for any future time using a fixed-effects ANOVA model. In the case of a complete MME (no missing combinations), the main effect of a given scenario or model is easily interpreted as the mean difference between 1) the CCR of all the projections using this scenario or model and 2) the mean CCR of the ensemble.
+
+## Estimation of the climate response
+In this vignette, we adopt the notations used in @evinUncertainty2026. In QUALYPSO, the climate response $CR_i(t)$ of each modelling chain $i$ is estimated by applying a trend model to the corresponding projection $Y_i(t)$. Several regression models are available (smoothing splines, polynomial regressions, local linear regressions) and corresponding parameters can be modified to provided more or less flexibility. This degree of smoothing is arbitrary, but a moderate flexibility limits the influence of IV.  @scherrerEstimatingTrendsCurrent2024 compare several approaches and advise to apply local linear regressions (loess) with a large span (42 years).
+
+QUALYPSO provides different options for the trend model. Smoothing splines can be fitted using `smooth.spline`, where the argument `df` indicates the desired equivalent number of degrees of freedom. `poly` fits a polynomial model and the parameter `degree` is an integer indicating the degree of the polynomial. `lowess` fits locally-weighted polynomial regressions and the parameter `f` in (0,1) is the proportion of points which influence the smooth at each value.
+
+Figure \@ref(fig:Fig2) illustrates these different options, for one projection of temperatures. For smoothing splines, small `df` values almost fit a linear curve (see plain red curve, 'SS: df=3'), whereas larger `df` values provide more flexibility but might overfit decadal oscillations, which should attributed to internal variability. Similarly, a fourth-degree polynomial as in @hawkinsPotentialNarrowUncertainty2009 (see dotted blue curve, 'poly: degree=4') or a small span parameter for lowess (green plain curve, 'lowess: f=0.1') lead to overfitted climate trends.
+
+```{r Fig2, fig.cap="Climate responses obtained with different trend models (smoothing splines, 'SS'; polynomial models, 'poly', and lowess) and different smoothing parameters.", echo = TRUE, out.width="90%"}
+# illustration for the first simulation
+iSimu=1
+X_time_vec=1971:2099
+dfCR = data.frame(x=X_time_vec,y=Y_DJFTas[iSimu,])
+plot(-1,-1,xlim=range(dfCR$x),ylim=range(dfCR$y),xlab="Years",ylab="DJF Temperature (°C)")
+lines(dfCR$x,dfCR$y,col="black")
+lableg = c()
+colleg = c()
+ltyleg = c()
+
+# fit smoothing splines, df can take values between 1 and the length of the simulations (here, 129)
+vec_df_SS = c(3,6,15)
+for(idf in 1:length(vec_df_SS)){
+  ySS = stats::smooth.spline(x = dfCR$x,y = dfCR$y, df=vec_df_SS[idf])$y
+  lines(X_time_vec,ySS,col="red",lty=idf,lwd=2)
+}
+lableg = c(lableg,paste0("SS: df=",vec_df_SS))
+colleg = c(colleg,rep("red",length(vec_df_SS)))
+ltyleg = c(ltyleg,1:length(vec_df_SS))
+
+# fit polynomial curves of order 1,2, and 3
+vec_poly = c(1,2,4)
+for(iorder in 1:length(vec_poly)){
+  yPOLY = stats::lm(y ~ stats::poly(x, vec_poly[iorder]), data = dfCR)
+  lines(X_time_vec,yPOLY$fitted.values,col="blue",lty=iorder,lwd=2)
+}
+lableg = c(lableg,paste0("poly: degree=",vec_poly))
+colleg = c(colleg,rep("blue",length(vec_poly)))
+ltyleg = c(ltyleg,1:length(vec_poly))
+
+# fit LOWESS with different degrees of smoothness
+vec_lowess = c(0.2,0.4,0.6)
+for(ilowess in 1:length(vec_lowess)){
+  yLOWESS <- stats::lowess(x=dfCR$x,y=dfCR$y, f=vec_lowess[ilowess], iter=0, delta=0)
+  lines(yLOWESS$x,yLOWESS$y,col="green",lty=ilowess,lwd=2)
+}
+lableg = c(lableg,paste0("lowess: f=",vec_lowess))
+colleg = c(colleg,rep("green",length(vec_lowess)))
+ltyleg = c(ltyleg,1:length(vec_lowess))
+
+legend("bottomright",legend = lableg,lty=ltyleg,col=colleg)
+```
+
+## Estimation of the climate change response and of internal variability
+The climate change response (CCR) of each simulation $i$, denoted by $CCR_i(t)$, is obtained by computing the differences in the climate response $CR_i(t)$ between future times and the reference time $t=c$. Absolute changes $CCR_i(t)=CR_i(t) - CR_i(c)$ or relative changes $CCR(t)= CR_i(t) / CR_i(c) - 1$ can be considered. Corresponding deviations $D_i(t)$ between the raw projection $Y_i(t)$ and the climate response $CR_i(t)$ are obtained as $D_i(t)=Y_i(t) - CR_i(t)$ and $D_i(t)= [ Y_i(t) - CR_i(t) ] / CR_i(c)$, respectively. By construction, the ensemble of CCRs has a null variability for the reference time $c$ and this variability generally increases for further time horizons.
+
+Internal variability $IV(t)$ is then estimated by the time variance of these deviations $Var(D_i(t))$ by fitting the following `gamlss` model: $D_i(t) \sim N(0, \sigma_t)$, where $\log(\sigma_t)$ is a linear function of time. The log-link is the default option in `gamlss` and avoids obtaining negative values for $\sigma_t$.
+
+## ANOVA model: Estimation of the ensemble mean and the main effect of each scenario/model
+
+To partition uncertainty sources, QUALYPSO assumes an additive model for the climate change response $CCR_i(t)$, i.e. a sum of the main effects corresponding to the different factors of dispersion (e.g. GCM, RCM) associated to this chain. In our example, the simulation $i=1$ has been obtained with the GCM CNRM-CM5 and the RCM RACMO22E:
+\begin{equation}
+    CCR_1(t) = M(t) + eG(CNRM, t) + eR(RACMO, t) + \epsilon_1(t),
+    (\#eq:ANOVA)
+\end{equation}
+where $M(t)$ is the ensemble mean for a future period $t$, and $eG(CNRM, t)$ and $eR(RACMO, t)$ are, respectively, the main effect of the GCM CNRM-CM5 and the main effect of the RCM RACMO22E for the time $t$, and where $\epsilon_1(t)$ is the residual term, i.e. the part of the climate change response that is not explained by the ANOVA model \@ref(eq:ANOVA), i.e. the sum of the individual main effects. The residuals of the ANOVA model arise from the imperfect estimation of the climate responses and the limitations of the additive assumption. For example, as a result of the additive assumption, the residuals can potentially include interactions between scenarios and models and/or between models of different categories, see, e.g. @hingrayPartitioningInternalVariability2014; @evinBalancedEstimateUncertainty2021.
+
+For each future time horizon $t$, the estimation of the grand mean and the main effects is carried out simultaneously using the function `lm` of the library `stats` [as in @evinUncertainty2026] or a Bayesian model [@evinPartitioningUncertaintyComponents2019]. When `lm` is applied, the least squares of the residuals $\epsilon_i(t), i=1,\dots,N$, where $N$ is the number of simulations, are minimized. The Bayesian approach gives similar results but provides a more comprehensive description of the uncertainty associated to the parameter estimates. However, it is computationally expensive and `lm` is the default (preferred) option. By construction, for both approaches, the sum of the main effects of a given factor is zero. Both approaches also provide unbiased estimates even if the ensemble is unbalanced (or incomplete). The uncertainty corresponding to the estimation of the main effects (standard deviations and confidence intervals) is directly related to the number of simulations available for one particular factor.
+
+For a future time horizon $t$, the uncertainties associated with each factor (GCM, RCM, ..) correspond to the variance of the corresponding main effects. For example, GCM uncertainty is estimated by the variance of the main effects $eG(g,t)$, $g=1..N_g$, estimated for the $N_g$ GCMs. Finally, the residual variability $RV(t)$ is the variance of the residuals $\epsilon_i(t)$ of the ANOVA model.
+
+The total uncertainty variance $CCRV(t)$ of the ensemble is obtained as the sum of the variance of each factor, and residual variability. In our example:
+\begin{equation}
+    CCRV(t) = Var(eG(g,t)) + Var(eR(r,t)) + RV(t).
+\end{equation}
+These different estimates can be used to estimate the fraction of the total uncertainty resulting from each source of uncertainty:
+\begin{equation}
+    FV_x(t) = Var_x(t)/CCRV(t),
+\end{equation}
+where $FV_x(t)$ is the fraction of total uncertainty variance $CCRV(t)$ explained by the source of uncertainty associated with $x$ (in the example $x$ = GCM, RCM, or RV).
+
+# The \CRANpkg{QUALYPSO} package
+
+The `QUALYPSO` package has one main function `QUALYPSO` which applies the different steps described above and has two mandatory arguments: `Y` and `scen`:
+
+* `Y` is an ensemble of projections, i.e. a matrix `nS` x `nY` where `nS` projections are provided for `nY` years or time steps,
+* `scen` is a `data.frame` that provides `nFactor` factors for each projection (e.g. GCM, RCM).
+
+## Optional arguments
+
+Additional features are provided if needed:
+
+* **`X`**: Projections are often assessed for different future time horizons (e.g. 2050, 2070) or given warming levels (e.g. +2$^\circ$C, +3$^\circ$C). In QUALYPSO, these horizons correspond to the **predictors** during the estimation of the climate responses and the argument `X` can be used to provide specific predictors corresponding to the projections, e.g. time or warming level. It can be a vector if the predictor is the same for all projections (e.g. `X`=2001:2100) or a matrix of the same size as `Y` if these predictors are different for the different projections (see case study where `X` are global temperatures). By default, a vector `1:nY` is created.
+
+* **`Xfut`**: The argument `Xfut` can be used to define the `nF` values of the predictor (time horizon or warming level) over which the ANOVA will be applied and for which QUALYPSO outputs will be produced. It must be a vector of values within the range of values of `X` to avoid extrapolation of the fitted climate responses. By default, it corresponds to `X` if `X` is a vector, `1:nY` if `X` is `NULL` or a vector of 10 values equally spaced between the minimum and maximum values of `X` if `X` is a matrix. **The first value defines the reference time or warming level** `c` used to obtain $CR_i(c)$ when climate change responses are computed.
+* **listOption**: named list where each item provides a different option. In particular:
+
+  + **typeClimateResponse** is the type of climate response fitted to the projections. It can be either `smooth.spline` where the parameter `df` in (1,nY] is the equivalent number of degrees of freedom (value by default), `poly`, a polynomial model fitted with `lm` where the parameter `degree` is an integer indicating the degree of the polynomial, `lowess` where the parameter `f` in (0,1) is the proportion of points which influence the smooth at each value, or `tweedie`, a Generalized Linear Model with the Tweedie distribution [@jorgensenExponential1987] where the parameter `var.power` is the index of power variance function (positive value). The tweedie model is the only model that handles zeros in the climate projections, typically with `var.power` in (1,2), see case study with projections of snow maxima hereafter.
+  + **parClimateResponse**: parameter of the model applied for the extraction of the climate response (i.e. `df`, `degree`, `f`, or `var.power`). Default values are `df`=4, `degree`=1, `f`=0.4 or `var.power`=1.5 for the smoothing spline, polynomial, lowess, or tweedie models, respectively.
+  + **typeChangeVariable**: type of climate change response $CCR(t)$: `abs` (absolute, value by default) or `rel` (relative). It can be interesting to assess relative changes when relative increases/decreases are more informative than absolute changes (e.g. for seasonal precipitation).
+
+## Outputs
+
+`QUALYPSO` returns a list containing different outputs given as time series corresponding to `Xfut` (except `CHANGEVAR_t` and `D_t`):
+
+* `CR_tfut`: Fitted climate responses [nS x nF],
+* `CCR_tfut`: Climate change responses [nS x nF],
+* `D_t`: Deviation from the climate change responses [nS x nY],
+* `CHANGEVAR_t`: Change variable from the projections [nS x nY],
+* `M_tfut`: List of estimates for the grand mean (mean, standard deviation, and credible/confidence intervals).
+* `E_tfut`: List of estimates for the main effects $eX(x,t)$ (mean, standard deviation, and credible/confidence intervals).
+* `VARE_tfut`: For each factor, provide the corresponding uncertainty $Var_x(t)$, i.e. the variance of the corresponding main effects (i.e. variability between the different RCMs, GCMs,..).
+* `CONTRIB_VARE_tfut`: Contribution of each individual effect to its component (as a percentage), e.g. what is the contribution of GCM1 to the GCM uncertainty.
+* `RV_tfut`: List of estimates for the variance of the residual errors  (mean, standard deviation, and credible/confidence intervals).
+* `IV_tfut`: Internal variability $IV(t)$.
+* `CCRV_tfut`: total variability $CCRV(t)$.
+* `FV_CCRV_tfut`: decomposition of the total variability for each component.
+* `RESERR`: $\epsilon_i(t)$, the differences between the climate change responses and the additive ANOVA formula (sum of the grand mean and the main effects).
+
+In addition to `CCRV_tfut` and `FV_CCRV_tfut`, we also provide the corresponding estimates including the interval variability, i.e. `CCRV_IV_tfut` and `FV_CCRV_IV_tfut`, where `CCRV_IV(t)` is the sum of the total uncertainty `CCRV(t)` and the internal variability `IV(t)`.
+
+## Plotting facilities
+
+Different plotting functions are provided to diagnose the outputs of the function `QUALYPSO`:
+
+* `plotQUALYPSO_CCR` plots the ensemble of climate change responses $CCR_i(t)$,
+* `plotQUALYPSO_CR` plots one simulation and the corresponding fitted climate response $CR_i(t)$,
+* `plotQUALYPSO_effect` plots the estimated main effects for one factor $Ex(t)$ and the corresponding estimation (sampling) uncertainties,
+* `plotQUALYPSO_M` plots the estimates of the grand mean $M(t)$ and its uncertainty,
+* `plotQUALYPSO_IV` plots the deviations $D_i(t)$ for all projections and an interval based on the estimates of the internal variability,
+* `plotQUALYPSO_FV_CCRV_IV` plots the fractional variance of $CCRV(t) + IV(t)$.
+
+# Case studies
+
+## Example 1: Synthetic scenarios
+
+This first example aims at illustrating the application of QUALYPSO when the true values of the main effects are known. It relies on a synthetic ensemble of 5 projections for 3 fictive GCMs and 2 fictive RCMs. The projections consider different combinations of these GCMs/RCMs for which the main effects are known. One combination is missing (GCM3/RCM2). Simple linear evolutions of time are considered in this toy model, for 21 future pseudo-years. Gaussian noise with a constant standard deviations are generated around these main effects and the grand mean is zero.
+
+```{r, echo=TRUE}
+# create nS=3 fictive climate scenarios with 2 GCMs and 2 RCMs, for a period of nY=20 years
+n=20
+t=0:n/n
+
+# GCM effects (sums to 0 for each t)
+effGCM1 = t*2
+effGCM2 = t*1
+effGCM3 = t*-3
+
+# RCM effects (sums to 0 for each t)
+effRCM1 = t*1
+effRCM2 = t*-1
+
+# These climate scenarios are a sum of effects and a random gaussian noise
+scenGCM1RCM1 = effGCM1 + effRCM1 + rnorm(n=n+1,sd=0.5)
+scenGCM1RCM2 = effGCM1 + effRCM2 + rnorm(n=n+1,sd=0.5)
+scenGCM2RCM1 = effGCM2 + effRCM1 + rnorm(n=n+1,sd=0.5)
+scenGCM2RCM2 = effGCM2 + effRCM2 + rnorm(n=n+1,sd=0.5)
+scenGCM3RCM1 = effGCM3 + effRCM1 + rnorm(n=n+1,sd=0.5)
+Y_synth = rbind(scenGCM1RCM1,scenGCM1RCM2,scenGCM2RCM1,scenGCM2RCM2,scenGCM3RCM1)
+
+# Here, scen_Synth indicates that the first scenario is obtained with the combination of the
+# GCM "GCM1" and RCM "RCM1", the second scenario is obtained with the combination of
+# the GCM "GCM1" and RCM "RCM2", etc.
+scen_Synth = data.frame(GCM=c('GCM1','GCM1','GCM2','GCM2','GCM3'),
+RCM=c('RCM1','RCM2','RCM1','RCM2','RCM1'))
+```
+
+We can run `QUALYPSO` for these projections available for 20 pseudo-years between 2000 to 2100. By construction, the long-term evolution of each synthetic climate projection is linear. Here, a linear trend model is adequate to estimate the climate response of each projection (option `typeClimateResponse="poly"` with `degree=1` by default).
+
+```{r, echo=TRUE}
+# run QUALYPSO
+X = seq(from=2000,to=2100,by=5)
+Q_synth = QUALYPSO(Y=Y_synth, scen=scen_Synth, X=X,listOption = list(typeClimateResponse="poly"))
+```
+
+We can check that climate responses are well fitted and compare them to the "true" climate response used to generate the projections (red line):
+
+```{r Fig3, fig.cap="Raw projection (plain curve), fitted climate response (thick line) and true climate response (dotted line)", echo=TRUE, out.width="90%"}
+plotQUALYPSO_CR(Q_synth,i=1)
+lines(X, effGCM1 + effRCM1,lty=2)
+legend("topleft",inset=c(0,0.1), legend = c("True response"), lty = 2, bty = "n")
+```
+
+For GCM and RCM effects, we can superimpose the estimated effects and the true known main effects (dotted lines). Note that they are adequately estimated even if the projection for the combination GCM3/RCM2 is missing.
+
+```{r Fig4, fig.cap="Median estimates of the main effects (plain lines) and corresponding 90% credible intervals, and true main effects (dotted lines)", echo=TRUE, out.width="90%"}
+plotQUALYPSO_effect(Q_synth,nameEff="GCM",xlab="Years")
+lines(X, effGCM1,lty=2,lwd=2,col="black")
+lines(X, effGCM2,lty=2,lwd=2,col="red")
+lines(X, effGCM3,lty=2,lwd=2,col="green")
+legend("topleft",inset=c(0,0.1), legend = c("Truth"), lty = 2, bty = "n")
+```
+
+## Example 2: Uncertainty Analysis for different time horizons
+The second example aims at illustrating QUALYPSO with real projections using the set of average winter temperature (DJF) climate projections described above. The dataset `Y_DJFTas` contains projections for the period 1971-2099 (129 years) for 20 combinations of GCMs (CMIP5) and RCMs models, obtained with the RCP8.5 scenario. We apply QUALYPSO with default options: the climate response of each projection is estimated using smoothing splines with `df=4` and the climate change response of each projection $i$ is defined by absolute differences $CR_i(t)-CR_i(c)$.
+
+```{r Fig5, fig.cap = "Fitted climate response for two projections", echo=TRUE, out.width="45%"}
+
+# call QUALYPSO
+Q_time = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=1971:2099)
+
+# diagnostic of the climate responses
+for(iS in 1:2) plotQUALYPSO_CR(QUALYPSOOUT = Q_time, iS = iS)
+```
+
+In this example, we also illustrate how the assumption about the evolution of internal variability can be checked. We remind that the logarithm of the standard deviation of $D_i(t)$ is a linear function of the predictor (e.g. time or warming level). The function `plotQUALYPSO_IV` provides a diagnostic plot where the deviations $D_i(t)$ are plotted as a function of the predictor (here the year), along with an interval [-1.645*$\sqrt{IV(t)}$ , +1.645*$\sqrt{IV(t)}$] that represent the model for $D_i(t)$ and should contain about 90% of the points according to the gaussian assumption. Figure \@ref(fig:Fig6) shows the output of this plot for this example. We see that internal variability decreases as a function of time. In this case, the interval contains most of the points and assumption about the evolution of internal variability seems reasonable.
+
+```{r Fig6, fig.cap = "Diagnostic plot for internal variability. Points represent all $D_i(t)$ estimates as a function of $X$. The red curves correspond to [-1.645*$\\sqrt{IV(t)}$ , +1.645*$\\sqrt{IV(t)}$] and should contain about 90% of the points.", echo=TRUE, out.width="90%"}
+# diagnostic of the internal variability
+plotQUALYPSO_IV(QUALYPSOOUT = Q_time)
+```
+
+
+## Example 3: Uncertainty Analysis for different Global Warming Levels
+
+The third example performs the ANOVA decomposition with the same ensemble of winter temperatures but using warming level as the predictor. `X_DJFTas_WL` contains smoothed warming levels at the planetary scale simulated by four different CMIP5 GCMs for the same period 1971-2099. All GCMs exceed +4 $^\circ$C at the end of the century (see Figure \@ref(fig:Fig8)). HadGEM2-ES is warmer than the three other GCMs.
+
+```{r Fig7, fig.cap="Global warming levels from the four GCMs.", echo=TRUE, out.width="90%"}
+vecGCM = unique(scen_DJFTas$GCM)
+X_time_vec = 1971:2099
+plot(-1,-1,xlim=range(X_time_vec),ylim=range(X_DJFTas_WL),xlab="Years",ylab="Global warming levels (°C)")
+for(i in 1:nrow(X_DJFTas_WL)){
+  lines(X_time_vec,X_DJFTas_WL[i,],col=match(scen_DJFTas$GCM[i], vecGCM))
+}
+legend("bottomright",legend = vecGCM, col=1:length(vecGCM),lty=1)
+```
+
+We can apply QUALYPSO as a function of these global warming levels simply by replacing the argument `X`. Here, we ask to produce the outputs for different warming levels between +1 $^\circ$C and +3 $^\circ$C.
+
+```{r Fig8, fig.cap="Fraction of total variance for absolute changes in mean winter temperature as a function of global warming levels.", echo=TRUE, out.width="90%"}
+# call QUALYPSO
+Q_wl = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=X_DJFTas_WL,Xfut=seq(from=1,to=3,by=0.1))
+
+# variance decomposition
+plotQUALYPSO_effect(QUALYPSOOUT = Q_wl,nameEff="GCM",xlab="lobal warming levels (°C)")
+```
+
+## Example 4: Projections with many zero values and Tweedie functions
+
+In many studies about climate change impacts, indicators can be bounded by physical thresholds. For example, many indicators are greater than or equal to zero (e.g. precipitation, low flows, snow intensities). When many zero values are present in the projections, extracting the climate responses using standard regression methods (linear models, smoothing splines, lowess) is not adapted because there is a probability mass in zero and residuals are not Gaussian. In addition, in this case, non-zero values usually follow skewed distributions, e.g. gamma distributions.
+
+The last example illustrates this type of application with a dataset containing annual maxima of snow water equivalent (SWE) projections for an area located at a low mean elevation (0 m) and with mild and rainy winters. Due to the rare snow events, these projections contain many zero values and distributions of non-zero values are skewed [@evinEstimatingChangesExtreme2025]. This ensemble is comprised of 18 projections obtained with nine different combinations of GCMs and RCMs and two emission scenarios (RCP4.5 and RCP8.5). Obviously, at larger warming levels, snow events become even rarer and the chance of having zero values increases.
+
+```{r, echo=TRUE, out.width="90%"}
+plot(-1,-1,xlim=range(X_SWE_WL),ylim=range(Y_SWE),
+xlab="Global warming levels (°C)",ylab = "SWE maxima (mm w.e.)")
+for(i in 1:nrow(Y_SWE)){
+  lines(X_SWE_WL[i,],Y_SWE[i,],col=i)
+}
+```
+
+For this kind of data, extracting the climate responses using standard regression methods (linear models, smoothing splines, lowess) are not adapted because residuals are not Gaussian. They provide poor fits when there is a probability mass in zero. In our example, they provide negative SWE values when the warming levels exceed 4$^\circ$C.
+
+An alternative model is provided by the `tweedie` function of the package `statmod`, which provides access to a wide range of generalized linear model (GLM) response distributions, including response distributions with mass at zero and continuous distributions for positive values.
+
+```{r, echo = TRUE, out.width="90%"}
+# illustration for the first simulation
+iSimu=1
+
+# df can take values between 1 and the length of the simulations (here, 129)
+vec_df = c(3,6,15)
+
+# take one projection
+dfpred = data.frame(x=X_SWE_WL[4,],y=Y_SWE[4,])
+
+plot(-1,-1,xlim=range(dfpred$x),ylim=range(dfpred$y),
+xlab="Global warming levels (°C)",ylab = "SWE maxima (mm w.e.)")
+
+# observations
+points(dfpred$x,dfpred$y,pch=20,cex=1.3)
+
+# smoothing splines
+smooth.spline.out<- stats::smooth.spline(x=dfpred$x,y=dfpred$y,df=4)
+lines(dfpred$x,smooth.spline.out$y,col="red",lwd=2)
+
+# polynomial function
+lm_out = stats::lm(y ~ stats::poly(x, 1), data = dfpred)
+lines(dfpred$x,lm_out$fitted.values,col="green",lwd=2)
+
+# lowess
+lowess_out <- lowess(x=dfpred$x,y=dfpred$y, f=0.6, iter=0, delta=0)
+lines(dfpred$x,lowess_out$y,col="blue",lwd=2)
+
+# tweedie
+glm_out <- stats::glm(y ~ x, 
+        family = statmod::tweedie(var.power = 1.5, link.power = 0), 
+        data = dfpred)
+lines(dfpred$x,glm_out$fitted.values,col="orange",lwd=2)
+        
+legend("topright",legend = c("smooth.spline","poly","lowess","tweedie"),
+lwd=2,col=c("red","green","blue","orange"),title="climate response model")
+```
+
+For this ensemble of projections, climate responses show a clear decrease at larger warming levels, up to -3 mm w.e. at +3$^\circ$C. These changes are small in comparison of the large inter-annual variability, SWE maxima exceeding 10 mm w.e. every few years. In this ensemble, we can also notice that residual variability is larger than the uncertainty due to RCMs, GCMs, and RCP emission scenarios, indicating that the uncertainty of climate responses is not well characterized by the additive sum of RCM, GCM, and RCP main effects.
+
+```{r, echo = TRUE, out.width="90%"}
+# list of options
+listOption = list(typeChangeVariable='abs',typeClimateResponse="tweedie")
+
+# call QUALYPSO
+Q_SWE = QUALYPSO(Y=Y_SWE,scen=scen_SWE,X=X_SWE_WL,Xfut=seq(from=0.5,to=3,by=0.1),
+listOption=listOption)
+
+# plot climate responses
+plotQUALYPSO_CCR(Q_SWE)
+
+```
+
+# Treatment of unbalanced ensembles
+
+As indicated in the introduction, the main motivation for the development of this package was to provide an easy access to statistical approaches that are adapted to unbalanced ensembles of climate projections. As discussed in @evinBalancedEstimateUncertainty2021, this issue is sometimes ignored in some uncertainty assessments, leading to biased estimates when direct averages are taken to estimate the main effects. Sometimes, subselection of available projections are done to obtain a balanced ensemble, leading to a dramatic waste of information. @evinPartitioningUncertaintyComponents2019 proposes a Bayesian approach that applies augmentation techniques to estimate the main effects of incomplete ensembles. The main downside of this approach is the computational burden, since it relies on sampling the posterior distributions with Markov Chain Monte Carlo (MCMC) techniques. Large samples are needed to represent adequately the posterior distributions. Comparatively, direct estimates using ordinary least squares, as implemented in the function `lm`, provide similar results almost instantaneously. In the following example, we provide a comparison of both approaches where we downsampled the illustrative ensemble of winter temperature projections, such that the GCMs HadGEM2-ES and MPI-ESM-LR appear only once in the ensemble. The two estimation approaches provide very similar results in terms of mean (plain curves) and credible/confidence intervals (see the larger intervals for the GCMs HadGEM2-ES and MPI-ESM-LR). In terms of running time, the application of QUALYPSO using the `lm` approach takes about 0.1 s, whereas the Bayesian approach, with 5,000 MCMC samples (2,000 burn-in samples and 3,000 kept samples) takes about 18 s. In addition, while the `lm` approach leads to a smooth temporal evolution for all estimates (e.g. climate responses, main effects, uncertainty components), the Bayesian approach does not, due to the limited sampling of the posterior distributions.
+
+```{r, echo = TRUE, out.width="45%"}
+# remove scenario for one GCM
+Y_sel = Y_DJFTas[-c(12,13,14,15,17,18,19,20),]
+scen_sel = scen_DJFTas[-c(12,13,14,15,17,18,19,20),]
+
+# lm
+listOption = list(typeChangeVariable='abs',typeClimateReponse = "smooth.spline", parClimateResponse = 3)
+system.time({Q_lm = QUALYPSO(Y=Y_sel,scen=scen_sel,X=1971:2099,Xfut=1990:2099,listOption=listOption)})
+
+# Bayesian
+listOption = list(typeChangeVariable='abs',parClimateResponse=3, ANOVAmethod="Bayesian",nBurn=2000,nKeep=5000)
+system.time({Q_Bayes = QUALYPSO(Y=Y_sel,scen=scen_sel,X=1971:2099,Xfut=1990:2099,listOption=listOption)})
+
+# main GCM effects
+lQ = list(lm=Q_lm,Bayesian=Q_Bayes)
+for(method in names(lQ)) plotQUALYPSO_effect(lQ[[method]],nameEff="GCM",xlab="Years",main=method)
+```
+
+# Estimating climate responses and internal variability before calling QUALYPSO
+
+QUALYPSO embeds different regression models (smoothing splines, linear models, polynomial models) to estimate the climate response, and one `glm` model (tweedie distributions). In some cases, these options might be inadequate or too limited. As an alternative, it is possible to estimate the climate responses and internal variability using other approaches and provide the different corresponding objects (the climate change responses, the climate responses, the deviations from the climate response, and internal variability) in `listOptions`. The different steps can be summarized as follows:
+
+**Outside QUALYPSO**
+
+1. estimate $CR(t)$ and $CCR(t)$ for each projection (e.g. using robust regression),
+2. extract fluctuations $D(t)$ from IV for each projection and model the temporal evolution of $IV(t)$,
+
+**With QUALYPSO** 
+
+3. estimate the main effects and all uncertainty components,
+4. use plotting functions and statistics.
+
+Here is an example based on the function `rlm` of the package `MASS` that applies robust linear mmodels. This approach is less sensitive to outliers and can be interesting if some rare values are abnormally large in the projections. It also shows the piece of code used to estimate internal variability using `gamlss`.
+
+```{r, echo = TRUE, out.width="90%"}
+library(MASS)
+library(gamlss)
+
+# define dimensions
+Xs = 1971:2099
+Xfut = 1990:2099
+Xref = Xfut[1]
+nY = length(Xs)
+nFut = length(Xfut)
+nS = nrow(Y_DJFTas)
+
+# initialise matrices
+CCR_tfut = CR_tfut = matrix(nrow=nS,ncol=nFut)
+D_t = CHANGEVAR_t = matrix(nrow=nS,ncol=nY)
+
+for(iS in 1:nS){
+  Ys = Y_DJFTas[iS,]
+
+  # data.frame with Xs and Ys
+  dfpred = data.frame(x=Xs,y=Ys)
+
+  # apply robust regression
+  rlm_out = rlm(y~x,data = dfpred)
+
+  # fitted responses at the points of the fit (for Dt), at Xfut and at Xref
+  CR_t_s = predict(rlm_out, newdata = data.frame(x = Xs))
+  CR_tfut_s = predict(rlm_out, newdata = data.frame(x = Xfut))
+  CR_tref = predict(rlm_out, newdata = data.frame(x = Xref))     
+
+  # store climate response for this simulation chain
+  CR_tfut[iS,] = CR_tfut_s
+
+  # fill matrices
+  CCR_tfut[iS,] = CR_tfut_s-CR_tref
+  D_t[iS,] = Ys-CR_t_s
+  CHANGEVAR_t[iS,] = Ys-CR_tref
+}
+
+# Heteroscedasticity: assume gaussian deviations from the climate responses
+# with a mean of zero
+Xmat = matrix(rep(Xs,nS),byrow=T,nrow=nS,ncol=nY)
+df_fit = data.frame(x = as.vector(Xmat), y = as.vector(D_t))
+gamlss_out = gamlss(y ~ x, sigma.formula = ~x, family = gamlss.dist::NO(), data = df_fit,mu.fix = TRUE, 
+mu.start = 0,control = gamlss.control(trace = FALSE))
+
+# predict IV(t) for Xfut
+sigma_pred = predict(object = gamlss_out, what = "sigma", type = "response", newdata = data.frame(x=Xfut),
+data = df_fit)
+IV_tfut = sigma_pred^2
+
+# return objects
+ClimateResponse = list(CR_tfut=CR_tfut,CCR_tfut=CCR_tfut,D_t=D_t,CHANGEVAR_t=CHANGEVAR_t,IV_tfut=IV_tfut)
+
+# call QUALYPSO with this list of custom climate responses
+Q_customCR = QUALYPSO(Y=Y_DJFTas,scen=scen_DJFTas,X=Xs,Xfut=Xfut,
+listOption=list(ClimateResponse=ClimateResponse))
+```
+
+# Limitations and caveats
+
+As discussed in section [`concepts`](#concepts), QUALYPSO relies on several assumptions that must be verified to ensure that outputs provide a fair assessment of the main uncertainties and their contribution to the total uncertainty. In particular:
+
+* **Estimation of the climate response**: The estimation of the climate responses is an important step that must not be overlooked. The fitted climate responses must reflect the expected reponses to climate change. The function `plotQUALYPSO_CR` provides a visualisation tool that can help to guide the choice of the smoothing parameter or the family of climate response models. As has been illustrated in the fourth example with SWE maxima, default options can lead to inadequate fitted climate responses.
+
+* **internal variability**: QUALYPSO assumes that $D_i(t)$ (deviations from the climate reponses) follow a normal distribution where the mean is zero and the logarithm of the standard deviation is a linear function of $t$. This simple assumption is generally reasonable but must be verified using the function `plotQUALYPSO_IV`. In the example with SWE maxima, it can be seen that the normal distribution is not verified, as $D_i(t)$ reach high positive values but not large negative values.
+
+```{r, echo = TRUE, out.width="90%"}
+plotQUALYPSO_IV(Q_SWE)
+```
+
+* **ANOVA model**: Similarly, QUALYPSO assumes a simple linear model for the decomposition of the main sources of uncertainty, where the climate change reponse is assumed to be a sum of the main fixed effects and a residual error. The residual errors are assumed to be identically distributed (same variance) and for small set of projections, to follow a Gaussian distribution. More complex ANOVA decomposition could involve interactions between the different factors and/or random effects [@northropQuantifyingSourcesUncertainty2014]. The motivation for this simple additive model is to provide a framework that can be applied for small ensembles of projections, which is generally the case of most applications. However, in some cases, and in particular with large ensembles [@evinBalancedEstimateUncertainty2021,@evinUncertainty2026], the residual variability can be large, suggesting that potential interactions between scenarios and models and/or between models of different categories are included in this component. In other cases, a large residual variability indicates that climate responses are poorly fitted.
+
+# Conclusion
+The package QUALYPSO is designed to tackle the main challenges of uncertainty partitioning in multi-model multi-scenario ensembles, and leverages large ensemble of projections used in climate change impact assessements. QUALYPSO enables the characterization of projected climate change responses (CCRs) across various climate and climate-related indicators. Specifically, it provides insights into the mean and the dispersion of the CCRs obtained from different modeling chains. Moreover, it facilitates the estimation of all sources of uncertainty – e.g. scenario, GCM, RCM, and impact model uncertainties – as well as potential additional dispersion in future changes arising from internal variability. Lastly, it enables the identification of the main effects associated with each model within each model category, providing a clearer understanding of how individual models compare and where the primary sources of uncertainty arise.
+
+# References
