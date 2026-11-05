@@ -1,6 +1,6 @@
 Package: QUALYPSO
 Type: Package
-Date: 2026-06-02
+Date: 2026-11-03
 License: GPL-3
 Title: Partitioning Uncertainty Components of an Incomplete Ensemble of Climate Projections
 Version: 3.2
@@ -10,12 +10,18 @@ Maintainer: Guillaume Evin <guillaume.evin@inrae.fr>
 Imports: MASS, expm, Rfast, stats, graphics, grDevices, gamlss, gamlss.dist, statmod
 Description: These functions apply an analysis of variance to incomplete ensembles of climate projections.
     It provides estimates of climate change responses of all simulation chains and of all uncertainty
-    variables. It has been applied to different ensembles of projections simulated to study the impact of climate change: 
-    for climate indicators in Evin et al. (2019) <doi:10.1175/JCLI-D-18-0606.1>; seasonal precipitation
+    variables. The current notations correspond to Evin et al. (2026) <doi:10.5194/hess-30-1023-2026>.
+    QUALYPSO has been applied to different ensembles of projections simulated to study the impact of climate
+    change: for climate indicators in Evin et al. (2019) <doi:10.1175/JCLI-D-18-0606.1>; seasonal precipitation
     and temperature in Evin, Somot and Hingray (2021) <doi:10.5194/esd-12-1543-2021>; hydrological variables
     in Evin et al. (2026) <doi:10.5194/hess-30-1023-2026>; photovoltaic energy in Bichet et al. (2019)
     <doi:10.1088/1748-9326/ab500a>.
 Depends: R (>= 3.5.0)
+Suggests:
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: https://github.com/guillaumeevin/QUALYPSO
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 8.0.0

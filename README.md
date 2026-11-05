@@ -6,4 +6,4 @@ This R package aims at partitioning the total variability in an ensemble of clim
 ## Getting Started
 The main function of the package is simply called "QUALYPSO". At least two arguments must be provided:
 - Y is an ensemble of climate projections, i.e. a matrix nS x nY where nS projections are provided for nY years or future time steps;
-- scenAvail is a data.frame which provides nEff characteristics for each projection. These characteristics typically indicate the models (GCM, RCM) and emission scenarios (RCP, SSP) that have been used to produce the climate projections. It can also be a spatial entity, or a factor related to an impact model.
+- scen is a data.frame which provides nEff characteristics for each projection. These characteristics typically indicate the models (GCM, RCM) and emission scenarios (RCP, SSP) that have been used to produce the climate projections. It can also be a spatial entity, or a factor related to an impact model.
